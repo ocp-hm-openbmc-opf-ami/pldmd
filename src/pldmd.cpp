@@ -38,13 +38,29 @@ static pldm_tid_t reservedTID = pldmInvalidTid;
 static uint8_t reservedPLDMType = pldmInvalidType;
 
 TIDMapper tidMapper;
-std::unique_ptr<mctpw::MCTPWrapper> mctpWrapper;
+std::vector<std::shared_ptr<mctpw::MCTPWrapper>> mctpWrappers;
+
+std::shared_ptr<mctpw::MCTPWrapper> getWrapper(mctpw_eid_t eid)
+{
+    for (auto& wrapper : mctpWrappers)
+    {
+        auto& epMap = wrapper->getEndpointMap();
+        if (epMap.count(eid) != 0)
+        {
+            return wrapper;
+        }
+    }
+    return nullptr;
+}
 
 void triggerDeviceDiscovery(const pldm_tid_t tid)
 {
     if (auto eidPtr = tidMapper.getMappedEID(tid))
     {
-        mctpWrapper->triggerMCTPDeviceDiscovery(*eidPtr);
+        if (auto wrapper = getWrapper(*eidPtr))
+        {
+            wrapper->triggerMCTPDeviceDiscovery(*eidPtr);
+        }
     }
 }
 
@@ -66,7 +82,7 @@ bool reserveBandwidth(const boost::asio::yield_context yield,
                 .c_str());
         return false;
     }
-    mctpw_eid_t eid = 0;
+    mctpw_eid_t eid;
     if (auto eidPtr = tidMapper.getMappedEID(tid))
     {
         eid = *eidPtr;
@@ -75,7 +91,7 @@ bool reserveBandwidth(const boost::asio::yield_context yield,
     {
         return false;
     }
-    if (mctpWrapper->reserveBandwidth(yield, eid, timeout) < 0)
+    if (mctpWrapper->reserveBandwidth(yield, eid.mctpEid(), timeout) < 0)
     {
         return false;
     }
@@ -105,7 +121,7 @@ bool releaseBandwidth(const boost::asio::yield_context yield,
     {
         return false;
     }
-    if (mctpWrapper->releaseBandwidth(yield, *eid) < 0)
+    if (mctpWrapper->releaseBandwidth(yield, eid->mctpEid()) < 0)
     {
         return false;
     }
@@ -125,7 +141,7 @@ std::optional<pldm_tid_t> TIDMapper::getMappedTID(const mctpw_eid_t eid)
         }
     }
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
-        ("Mapper: EID " + std::to_string(static_cast<int>(eid)) +
+        ("Mapper: EID " + std::to_string(static_cast<int>(eid.id)) +
          " is not mapped to any TID")
             .c_str());
     return std::nullopt;
@@ -139,7 +155,7 @@ bool TIDMapper::addEntry(const pldm_tid_t tid, const mctpw_eid_t eid)
         {
             phosphor::logging::log<phosphor::logging::level::ERR>(
                 ("Unable to add entry. EID: " +
-                 std::to_string(static_cast<int>(eid)) +
+                 std::to_string(static_cast<int>(eid.id)) +
                  " is already mapped with another TID: " +
                  std::to_string(static_cast<int>(tid)))
                     .c_str());
@@ -150,7 +166,7 @@ bool TIDMapper::addEntry(const pldm_tid_t tid, const mctpw_eid_t eid)
     tidMap.insert_or_assign(tid, eid);
     phosphor::logging::log<phosphor::logging::level::INFO>(
         ("Mapper: TID " + std::to_string(static_cast<int>(tid)) +
-         " mapped to EID " + std::to_string(static_cast<int>(eid)))
+         " mapped to EID " + std::to_string(static_cast<int>(eid.id)))
             .c_str());
     return true;
 }
@@ -257,12 +273,16 @@ static bool doSendReceievePldmMessage(boost::asio::yield_context yield,
                                       std::vector<uint8_t>& pldmReq,
                                       std::vector<uint8_t>& pldmResp)
 {
-    auto sendStatus = mctpWrapper->sendReceiveYield(
-        yield, dstEid, pldmReq, std::chrono::milliseconds(timeout));
-    pldmResp = sendStatus.second;
-    utils::printVect("Request(MCTP payload):", pldmReq);
-    utils::printVect("Response(MCTP payload):", pldmResp);
-    return sendStatus.first ? false : true;
+    if (auto wrapper = getWrapper(dstEid))
+    {
+        auto sendStatus = wrapper->sendReceiveYield(
+            yield, dstEid, pldmReq, std::chrono::milliseconds(timeout));
+        pldmResp = sendStatus.second;
+        utils::printVect("Request(MCTP payload):", pldmReq);
+        utils::printVect("Response(MCTP payload):", pldmResp);
+        return sendStatus.first ? false : true;
+    }
+    return false;
 }
 
 bool sendReceivePldmMessage(boost::asio::yield_context yield,
@@ -440,14 +460,18 @@ bool sendPldmMessage(boost::asio::yield_context yield, const pldm_tid_t tid,
         retryCount = maxRetryCount;
     }
 
-    for (size_t retry = 0; retry < retryCount; retry++)
+    // TODO Set rc to invalid state
+    if (auto wrapper = getWrapper(dstEid))
     {
-        rc = mctpWrapper->sendYield(yield, dstEid, msgTag, tagOwner, payload);
-        if (rc.first || rc.second < 0)
+        for (size_t retry = 0; retry < retryCount; retry++)
         {
-            continue;
+            rc = wrapper->sendYield(yield, dstEid, msgTag, tagOwner, payload);
+            if (rc.first || rc.second < 0)
+            {
+                continue;
+            }
+            break;
         }
-        break;
     }
 
     if (rc.first || rc.second < 0)
@@ -458,10 +482,11 @@ bool sendPldmMessage(boost::asio::yield_context yield, const pldm_tid_t tid,
                 .c_str());
         return false;
     }
+
     return true;
 }
 
-auto msgRecvCallback = [](void*, mctpw::eid_t srcEid, bool tagOwner,
+auto msgRecvCallback = [](void*, mctpw_eid_t srcEid, bool tagOwner,
                           uint8_t msgTag, const std::vector<uint8_t>& data,
                           int) {
     // Intentional copy. MCTPWrapper provides const reference in callback
@@ -476,7 +501,7 @@ auto msgRecvCallback = [](void*, mctpw::eid_t srcEid, bool tagOwner,
         if (!tid)
         {
             phosphor::logging::log<phosphor::logging::level::WARNING>(
-                ("EID " + std::to_string(static_cast<int>(srcEid)) +
+                ("EID " + std::to_string(static_cast<int>(srcEid.id)) +
                  " is not mapped to any TID; Discarding the packet")
                     .c_str());
             return;
@@ -497,7 +522,7 @@ auto msgRecvCallback = [](void*, mctpw::eid_t srcEid, bool tagOwner,
                     phosphor::logging::log<phosphor::logging::level::INFO>(
                         "Unsupported PLDM message received",
                         phosphor::logging::entry("TID=%d", *tid),
-                        phosphor::logging::entry("EID=%d", srcEid),
+                        phosphor::logging::entry("EID=%d", srcEid.id),
                         phosphor::logging::entry("MSG_TYPE=%d", *pldmMsgType));
                     break;
             }
@@ -519,14 +544,15 @@ uint8_t createInstanceId(pldm_tid_t tid)
 void initDevice(const mctpw_eid_t eid, boost::asio::yield_context yield)
 {
     phosphor::logging::log<phosphor::logging::level::INFO>(
-        ("Initializing MCTP EID " + std::to_string(eid)).c_str());
+        ("Initializing MCTP EID " + std::to_string(eid.id)).c_str());
 
     pldm_tid_t assignedTID = 0x00;
     pldm::base::CommandSupportTable cmdSupportTable;
     if (!pldm::base::baseInit(yield, eid, assignedTID, cmdSupportTable))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            "PLDM base init failed", phosphor::logging::entry("EID=%d", eid));
+            "PLDM base init failed",
+            phosphor::logging::entry("EID=%d", eid.id));
         return;
     }
 
@@ -591,12 +617,12 @@ void onDeviceUpdate(void*, const mctpw::Event& evt,
     {
         case mctpw::Event::EventType::deviceAdded: {
             pldm::platform::pauseSensorPolling();
-            initDevice(evt.eid, yield);
+            initDevice(evt.id, yield);
             pldm::platform::resumeSensorPolling();
             break;
         }
         case mctpw::Event::EventType::deviceRemoved: {
-            auto tid = pldm::tidMapper.getMappedTID(evt.eid);
+            auto tid = pldm::tidMapper.getMappedTID(evt.id);
             if (tid)
             {
                 deleteDevice(tid.value());
@@ -604,7 +630,7 @@ void onDeviceUpdate(void*, const mctpw::Event& evt,
             else
             {
                 phosphor::logging::log<phosphor::logging::level::WARNING>(
-                    ("EID " + std::to_string(static_cast<int>(evt.eid)) +
+                    ("EID " + std::to_string(static_cast<int>(evt.id.id)) +
                      " is not mapped to any TID")
                         .c_str());
             }
@@ -663,21 +689,27 @@ int main(void)
 
     // TODO - Read from entity manager about the transport bindings to be
     // supported by PLDM
-    mctpw::MCTPConfiguration config(mctpw::MessageType::pldm,
-                                    mctpw::BindingType::mctpOverSmBus);
+    mctpw::MCTPConfiguration smbusConfig(mctpw::MessageType::pldm,
+                                         mctpw::BindingType::mctpOverSmBus);
+    mctpw::MCTPConfiguration pcieConfig(mctpw::MessageType::pldm,
+                                        mctpw::BindingType::mctpOverPcieVdm);
 
-    pldm::mctpWrapper = std::make_unique<mctpw::MCTPWrapper>(
-        conn, config, onDeviceUpdate, pldm::msgRecvCallback);
+    pldm::mctpWrappers.emplace_back(std::make_shared<mctpw::MCTPWrapper>(
+        conn, smbusConfig, onDeviceUpdate, pldm::msgRecvCallback));
+    pldm::mctpWrappers.emplace_back(std::make_shared<mctpw::MCTPWrapper>(
+        conn, pcieConfig, onDeviceUpdate, pldm::msgRecvCallback));
 
     boost::asio::spawn(*ioc, [](boost::asio::yield_context yield) {
-        pldm::mctpWrapper->detectMctpEndpoints(yield);
-        mctpw::MCTPWrapper::EndpointMap eidMap =
-            pldm::mctpWrapper->getEndpointMap();
-        for (auto& [eid, service] : eidMap)
+        for (auto wrapper : pldm::mctpWrappers)
         {
-            pldm::platform::pauseSensorPolling();
-            initDevice(eid, yield);
-            pldm::platform::resumeSensorPolling();
+            wrapper->detectMctpEndpoints(yield);
+            auto eidMap = wrapper->getEndpointMap();
+            for (auto& [eid, service] : eidMap)
+            {
+                pldm::platform::pauseSensorPolling();
+                initDevice(eid, yield);
+                pldm::platform::resumeSensorPolling();
+            }
         }
     });
 

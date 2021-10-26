@@ -16,10 +16,14 @@
 
 #pragma once
 
+#include "mctp_wrapper.hpp"
+
 #include <boost/asio/spawn.hpp>
 #include <functional>
 
 #include "base.h"
+
+using mctpw_eid_t = mctpw::DeviceID;
 
 namespace std
 {
@@ -65,7 +69,7 @@ struct PLDMMsgTypes
 };
 
 // TODO. Use eid_type for eid
-bool baseInit(boost::asio::yield_context yield, const uint8_t eid,
+bool baseInit(boost::asio::yield_context yield, const mctpw_eid_t eid,
               pldm_tid_t& tid, CommandSupportTable& cmdSupportTable);
 bool deleteDeviceBaseInfo(const pldm_tid_t tid);
 

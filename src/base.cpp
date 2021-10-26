@@ -157,7 +157,7 @@ static bool validateBaseReqEncode(const mctpw_eid_t eid, const int rc,
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             (commandString + ": Request encode failed").c_str(),
-            phosphor::logging::entry("EID=%d", eid),
+            phosphor::logging::entry("EID=%d", eid.id),
             phosphor::logging::entry("RC=%d", rc));
         return false;
     }
@@ -172,7 +172,7 @@ static bool validateBaseRespDecode(const mctpw_eid_t eid, const int rc,
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             (commandString + ": Response decode failed").c_str(),
-            phosphor::logging::entry("EID=%d", eid),
+            phosphor::logging::entry("EID=%d", eid.id),
             phosphor::logging::entry("RC=%d", rc));
         return false;
     }
@@ -183,7 +183,7 @@ static bool validateBaseRespDecode(const mctpw_eid_t eid, const int rc,
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             (commandString + ": Invalid completion code").c_str(),
-            phosphor::logging::entry("EID=%d", eid),
+            phosphor::logging::entry("EID=%d", eid.id),
             phosphor::logging::entry("CC=%d", completionCode));
         return false;
     }
@@ -214,7 +214,7 @@ bool getSupportedPLDMTypes(boost::asio::yield_context yield,
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "Send or receive error while getting supported PLDM Types",
-            phosphor::logging::entry("EID=%d", eid));
+            phosphor::logging::entry("EID=%d", eid.id));
         return false;
     }
 
@@ -270,7 +270,7 @@ bool getPLDMVersions(boost::asio::yield_context yield, const mctpw_eid_t eid,
         {
             phosphor::logging::log<phosphor::logging::level::ERR>(
                 "Send or receive error while getting supported PLDM Versions",
-                phosphor::logging::entry("EID=0x%X", eid));
+                phosphor::logging::entry("EID=0x%X", eid.id));
             return false;
         }
 
@@ -297,7 +297,7 @@ bool getPLDMVersions(boost::asio::yield_context yield, const mctpw_eid_t eid,
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "Version response length is less than expected",
             phosphor::logging::entry("LEN=%d", versionDataBuffer.size()),
-            phosphor::logging::entry("EID=0x%X", eid));
+            phosphor::logging::entry("EID=0x%X", eid.id));
         return false;
     }
 
@@ -308,7 +308,7 @@ bool getPLDMVersions(boost::asio::yield_context yield, const mctpw_eid_t eid,
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "Version data size must be a multiple of 4",
             phosphor::logging::entry("LEN=%d", versionDataSize),
-            phosphor::logging::entry("EID=0x%X", eid));
+            phosphor::logging::entry("EID=0x%X", eid.id));
         return false;
     }
 
@@ -333,7 +333,7 @@ bool getPLDMVersions(boost::asio::yield_context yield, const mctpw_eid_t eid,
             phosphor::logging::entry("CRC1=0x%X", *crcPacket),
             phosphor::logging::entry("CRC2=0x%X", crcCalculated),
             phosphor::logging::entry("Type=0x%X", pldmType),
-            phosphor::logging::entry("EID=0x%X", eid));
+            phosphor::logging::entry("EID=0x%X", eid.id));
         return false;
     }
 
@@ -361,7 +361,7 @@ std::optional<SupportedCommands>
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "Send or receive error during GetPLDMCommands request",
-            phosphor::logging::entry("EID=0x%X", eid));
+            phosphor::logging::entry("EID=0x%X", eid.id));
         return std::nullopt;
     }
 
@@ -484,7 +484,7 @@ VersionSupportTable
         {
             phosphor::logging::log<phosphor::logging::level::ERR>(
                 "Error getting supported PLDM Versions",
-                phosphor::logging::entry("EID=0x%X", eid),
+                phosphor::logging::entry("EID=0x%X", eid.id),
                 phosphor::logging::entry("TYPE=0x%X", pldmType));
             // Continue scanning next PLDM type
         }
@@ -520,7 +520,7 @@ CommandSupportTable
             phosphor::logging::log<phosphor::logging::level::ERR>(
                 "GetPLDMCommands failed",
                 phosphor::logging::entry("TYPE=0x%X", versionTable.first),
-                phosphor::logging::entry("EID=0x%X", eid));
+                phosphor::logging::entry("EID=0x%X", eid.id));
         }
     }
     return cmdSupportTable;
@@ -768,12 +768,13 @@ bool baseInit(boost::asio::yield_context yield, const mctpw_eid_t eid,
               pldm_tid_t& tid, CommandSupportTable& cmdSupportTable)
 {
     phosphor::logging::log<phosphor::logging::level::INFO>(
-        "Running Base initialisation", phosphor::logging::entry("EID=%d", eid));
+        "Running Base initialisation",
+        phosphor::logging::entry("EID=%d", eid.id));
 
     if (auto mappedTID = tidMapper.getMappedTID(eid))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            ("EID: " + std::to_string(static_cast<int>(eid)) +
+            ("EID: " + std::to_string(static_cast<int>(eid.id)) +
              " is already mapped with another TID: " +
              std::to_string(static_cast<int>(mappedTID.value())))
                 .c_str());
@@ -785,12 +786,12 @@ bool baseInit(boost::asio::yield_context yield, const mctpw_eid_t eid,
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "Error getting supported PLDM Types",
-            phosphor::logging::entry("EID=%d", eid));
+            phosphor::logging::entry("EID=%d", eid.id));
         return false;
     }
     phosphor::logging::log<phosphor::logging::level::INFO>(
         "GetTypes processed successfully",
-        phosphor::logging::entry("EID=%d", eid));
+        phosphor::logging::entry("EID=%d", eid.id));
 
     auto versionSupportTable = createVersionSupportTable(yield, eid, pldmTypes);
 
@@ -807,7 +808,7 @@ bool baseInit(boost::asio::yield_context yield, const mctpw_eid_t eid,
     {
         phosphor::logging::log<phosphor::logging::level::INFO>(
             "Terminus doesn't have a TID assigned"),
-            phosphor::logging::entry("EID=0x%X", eid);
+            phosphor::logging::entry("EID=0x%X", eid.id);
     }
     else
     {
@@ -864,7 +865,7 @@ bool baseInit(boost::asio::yield_context yield, const mctpw_eid_t eid,
         !setTID(yield, eid, tid))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
-            "SetTID failed", phosphor::logging::entry("EID=0x%X", eid));
+            "SetTID failed", phosphor::logging::entry("EID=0x%X", eid.id));
         tidPool.pushFrontUnusedTID(tid);
         return false;
     }
