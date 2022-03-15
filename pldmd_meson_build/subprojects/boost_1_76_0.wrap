@@ -1,0 +1,4 @@
+[wrap-file]
+source_url = https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.gz
+source_hash = 7bd7ddceec1a1dfdcbdb3e609b60d01739c38390a5f956385a12f3122049f0ca
+source_filename = packagecache/boost_1_76_0.tar.gz
