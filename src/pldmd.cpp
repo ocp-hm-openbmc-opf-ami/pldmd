@@ -30,6 +30,10 @@ static constexpr const char* pldmService = "xyz.openbmc_project.pldm";
 static constexpr const char* pldmPath = "/xyz/openbmc_project/pldm";
 bool debug = false;
 
+/*pldmd entity manager*/
+static std::shared_ptr<sdbusplus::asio::connection> conn;
+/**********************/
+
 namespace pldm
 {
 
@@ -654,6 +658,163 @@ void enableDebug()
     }
 }
 
+// Config from entity manager
+template <typename T>
+static bool getField(const pldmConfigMap& configuration,
+                     const std::string& fieldName, T& value)
+{
+
+    auto it = configuration.find(fieldName);
+    if (it != configuration.end())
+    {
+        const T* ptrValue = std::get_if<T>(&it->second);
+        if (ptrValue != nullptr)
+        {
+            value = *ptrValue;
+            return true;
+        }
+    }
+    return false;
+}
+
+// Config from entity manager
+namespace pldmconfig
+{
+
+static const std::string boardPathNamespace =
+    "/xyz/openbmc_project/inventory/system/board";
+
+static const std::string pldmTypeName =
+    "xyz.openbmc_project.Configuration.PldmConfiguration";
+
+static const std::string pldmObjectPath = "/xyz/openbmc_project/pldm";
+
+std::vector<std::string> getConfigurationPaths()
+{
+    auto method_call = conn->new_method_call(
+        "xyz.openbmc_project.ObjectMapper",
+        "/xyz/openbmc_project/object_mapper",
+        "xyz.openbmc_project.ObjectMapper", "GetSubTreePaths");
+
+    method_call.append(boardPathNamespace, 2,
+                       std::array<std::string, 1>({pldmTypeName}));
+
+    auto reply = conn->call(method_call);
+    std::vector<std::string> paths;
+    reply.read(paths);
+    return paths;
+}
+
+pldmConfigMap getConfigurationMap(const std::string& pldmConfigurationPath)
+{
+    auto method_call = conn->new_method_call(
+        "xyz.openbmc_project.EntityManager", pldmConfigurationPath.c_str(),
+        "org.freedesktop.DBus.Properties", "GetAll");
+    method_call.append(pldmTypeName);
+
+    // Note: This is a blocking call.
+    // However, there is nothing to do until the configuration is retrieved.
+    auto reply = conn->call(method_call);
+    pldmConfigMap map;
+    reply.read(map);
+    return map;
+}
+
+std::optional<transportTuple> getPldmConfig()
+{
+    std::vector<std::string> configurationPaths;
+    try
+    {
+        configurationPaths = getConfigurationPaths();
+    }
+    catch (const std::exception& e)
+    {
+        phosphor::logging::log<phosphor::logging::level::WARNING>(
+            (std::string("Could not retrieve existing configurations: ") +
+             e.what())
+                .c_str());
+        return std::nullopt;
+    }
+
+    for (auto& objectPath : configurationPaths)
+    {
+        if (!objectPath.compare(pldmObjectPath))
+        {
+            auto result = pldmConfigtoSetUp(objectPath);
+            if (result)
+            {
+                return result.value();
+            }
+            return std::nullopt;
+        }
+    }
+
+    return std::nullopt;
+}
+
+std::optional<transportTuple> pldmConfigtoSetUp(const std::string& objPath)
+{
+    bindingMap bindMap;
+    const auto relativePath = objPath.substr(objPath.find(boardPathNamespace) +
+                                             boardPathNamespace.size() + 1);
+
+    const std::string configPath = boardPathNamespace + "/" + relativePath;
+
+    const pldmConfigMap map = getConfigurationMap(configPath);
+
+    std::string configType;
+    //"Name" tells the configuration Type....
+    if (!getField(map, "Type", configType))
+    {
+        return std::nullopt;
+    }
+
+    transportTypeVec TransportTypes;
+    //"TransportTypes" tells the types of transport medium considered
+    if (!getField(map, "TransportTypes", TransportTypes))
+    {
+        return std::nullopt;
+    }
+
+    std::string prefBinding;
+    // preferred binding is used for telling the preferred binding source
+    if (!getField(map, "PreferredBinding", prefBinding))
+    {
+        return std::nullopt;
+    }
+
+    std::vector<int> bindingVec;
+    std::string transName;
+    for (auto& element : TransportTypes)
+    {
+        for (auto& elementType : element)
+        {
+            transName = elementType.first;
+            for (auto& bind : elementType.second)
+            {
+                if (!transName.compare("MCTP"))
+                {
+                    if (!bind.compare("MCTP over SMBus"))
+                    {
+                        bindingVec.push_back(static_cast<int>(
+                            mctpw::BindingType::mctpOverSmBus));
+                    }
+                    else if (!bind.compare("MCTP over PCIe"))
+                    {
+                        bindingVec.push_back(static_cast<int>(
+                            mctpw::BindingType::mctpOverPcieVdm));
+                    }
+                    bindMap.emplace(transName, bindingVec);
+                }
+            }
+        }
+    }
+
+    return std::make_tuple(bindMap, prefBinding);
+}
+
+} // namespace pldmconfig
+
 int main(void)
 {
     auto ioc = std::make_shared<boost::asio::io_context>();
@@ -672,7 +833,7 @@ int main(void)
             raise(sigNum);
         });
 
-    auto conn = std::make_shared<sdbusplus::asio::connection>(*ioc);
+    conn = std::make_shared<sdbusplus::asio::connection>(*ioc);
 
     auto objectServer = std::make_shared<sdbusplus::asio::object_server>(conn);
     conn->request_name(pldmService);
@@ -681,28 +842,63 @@ int main(void)
 
     auto objManager =
         std::make_shared<sdbusplus::server::manager::manager>(*conn, pldmPath);
-
     enableDebug();
 
-    // TODO - Read from entity manager about the transport bindings to be
-    // supported by PLDM
-    mctpw::MCTPConfiguration config(mctpw::MessageType::pldm,
-                                    mctpw::BindingType::mctpOverSmBus);
+    mctpw::MCTPConfiguration config;
+    pldm::mctpWrapper = nullptr;
 
-    pldm::mctpWrapper = std::make_unique<mctpw::MCTPWrapper>(
-        conn, config, onDeviceUpdate, pldm::msgRecvCallback);
+    auto [transportBinding, prefBindingType] =
+        pldmconfig::getPldmConfig().value();
 
-    boost::asio::spawn(*ioc, [](boost::asio::yield_context yield) {
-        pldm::mctpWrapper->detectMctpEndpoints(yield);
-        mctpw::MCTPWrapper::EndpointMap eidMap =
-            pldm::mctpWrapper->getEndpointMap();
-        for (auto& [eid, service] : eidMap)
+    if (!transportBinding.empty())
+    {
+        for (auto& trans : transportBinding)
         {
-            pldm::platform::pauseSensorPolling();
-            initDevice(eid, yield);
-            pldm::platform::resumeSensorPolling();
+            if (!trans.second.empty() && !trans.first.compare("MCTP"))
+            {
+                for (auto& bindType : trans.second)
+                {
+                    config = mctpw::MCTPConfiguration(
+                        mctpw::MessageType::pldm,
+                        static_cast<mctpw::BindingType>(bindType));
+
+                    pldm::mctpWrapper = std::make_unique<mctpw::MCTPWrapper>(
+                        conn, config, onDeviceUpdate, pldm::msgRecvCallback);
+
+                    boost::asio::spawn(
+                        *ioc, [](boost::asio::yield_context yield) {
+                            pldm::mctpWrapper->detectMctpEndpoints(yield);
+                            auto& eidMap = pldm::mctpWrapper->getEndpointMap();
+                            for (auto& [eid, service] : eidMap)
+                            {
+                                pldm::platform::pauseSensorPolling();
+                                initDevice(eid, yield);
+                                pldm::platform::resumeSensorPolling();
+                            }
+                        });
+                }
+            }
         }
-    });
+    }
+    else
+    { // default Binding incase it fails from entity Manager
+        config = mctpw::MCTPConfiguration(mctpw::MessageType::pldm,
+                                          mctpw::BindingType::mctpOverSmBus);
+
+        pldm::mctpWrapper = std::make_unique<mctpw::MCTPWrapper>(
+            conn, config, onDeviceUpdate, pldm::msgRecvCallback);
+
+        boost::asio::spawn(*ioc, [](boost::asio::yield_context yield) {
+            pldm::mctpWrapper->detectMctpEndpoints(yield);
+            auto& eidMap = pldm::mctpWrapper->getEndpointMap();
+            for (auto& [eid, service] : eidMap)
+            {
+                pldm::platform::pauseSensorPolling();
+                initDevice(eid, yield);
+                pldm::platform::resumeSensorPolling();
+            }
+        });
+    }
 
     ioc->run();
 

@@ -24,7 +24,9 @@
 #include <memory>
 #include <sdbusplus/asio/connection.hpp>
 #include <sdbusplus/asio/object_server.hpp>
+#include <tuple>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include "base.h"
@@ -36,6 +38,15 @@ std::shared_ptr<sdbusplus::asio::connection> getSdBus();
 std::shared_ptr<sdbusplus::asio::object_server> getObjServer();
 std::unique_ptr<sdbusplus::asio::dbus_interface>
     addUniqueInterface(const std::string& path, const std::string& name);
+
+/*******************Pldm Config**************************/
+using transMap = std::unordered_map<std::string, std::vector<std::string>>;
+using transportTypeVec = std::vector<transMap>;
+using pldmConfigField = std::variant<std::string, transportTypeVec>;
+using pldmConfigMap = std::unordered_map<std::string, pldmConfigField>;
+using bindingMap = std::unordered_map<std::string, std::vector<int>>;
+using transportTuple = std::tuple<bindingMap, std::string>;
+/*********************************************************/
 
 /** @brief flag to enable debugging*/
 extern bool debug;
@@ -272,3 +283,17 @@ void pldmMsgRecvFwUpdCallback(const pldm_tid_t tid, const uint8_t msgTag,
 } // namespace fwu
 
 } // namespace pldm
+
+// Config from entity manager
+namespace pldmconfig
+{
+
+std::vector<std::string> getConfigurationPaths();
+
+pldmConfigMap getConfigurationMap(const std::string& configurationPath);
+
+std::optional<transportTuple> pldmConfigtoSetUp(const std::string& objPath);
+
+std::optional<transportTuple> getPldmConfig();
+
+} // namespace pldmconfig
