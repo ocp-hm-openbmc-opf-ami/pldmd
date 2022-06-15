@@ -20,7 +20,7 @@ boost = dependency('boost', version : '>=1.71',
 
 sdbusplus = dependency('sdbusplus')
 phosphorlog_dep = dependency('phosphor-logging')
-libpldm_dep = dependency('libpldm', required: false)
+libpldm_dep = dependency('libpldm-intel', required: false)
 if not libpldm_dep.found()
     cmake = import('cmake')
     opt_var = cmake.subproject_options()
@@ -28,7 +28,7 @@ if not libpldm_dep.found()
     sub_proj = cmake.subproject('libpldm', options: opt_var)
     # message('CMaket targets:\n - ' + '\n - '.join(sub_proj.target_list()))
     libpldm_dep = sub_proj.dependency('pldm_intel')
-    meson.override_dependency('libpldm', libpldm_dep)
+    meson.override_dependency('libpldm-intel', libpldm_dep)
 endif
 mctpwplus_dep = dependency('mctpwplus')
 dbus_intf_dep = dependency('phosphor-dbus-interfaces')
@@ -61,4 +61,11 @@ deps = [
     extra_deps
 ]
 
-pldmd_exe = executable('pldmd', src_files, dependencies: deps)
+pldmd_exe = executable('pldmd', src_files, dependencies: deps, install: true)
+configure_file(
+  copy: true,
+  input: 'service_files/xyz.openbmc_project.pldmd.service',
+  install: true,
+  install_dir: systemd_system_unit_dir,
+  output: 'xyz.openbmc_project.pldmd.service',
+)
