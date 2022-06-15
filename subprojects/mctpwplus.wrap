@@ -1,0 +1,7 @@
+[wrap-git]
+url = https://github.com/intel-collab/firmware.bmc.openbmc.libraries.mctpwplus.git
+revision = 2f525a71e7d35997cecc133481828f9c4efa506f
+
+[provide]
+mctpwplus = mctpwplus_dep
+mctpwplus-nothread = mctpwplus_nothread_dep
