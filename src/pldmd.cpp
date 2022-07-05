@@ -20,6 +20,8 @@
 #include "pldm.hpp"
 #include "utils.hpp"
 
+#include <queue>
+
 extern "C" {
 #include <signal.h>
 }
@@ -79,18 +81,8 @@ bool reserveBandwidth(const boost::asio::yield_context yield,
     {
         return false;
     }
-    boost::system::error_code ec;
-    auto bus = getSdBus();
-    int rc = bus->yield_method_call<int>(
-        yield, ec, "xyz.openbmc_project.MCTP_SMBus_PCIe_slot",
-        "/xyz/openbmc_project/mctp", "xyz.openbmc_project.MCTP.Base",
-        "ReserveBandwidth", eid, timeout);
-
-    if (ec || rc < 0)
+    if (mctpWrapper->reserveBandwidth(yield, eid, timeout) < 0)
     {
-        phosphor::logging::log<phosphor::logging::level::ERR>(
-            (("ReserveBandwidth: failed for EID: ") + std::to_string(eid))
-                .c_str());
         return false;
     }
     rsvBWActive = true;
@@ -119,24 +111,23 @@ bool releaseBandwidth(const boost::asio::yield_context yield,
     {
         return false;
     }
-    boost::system::error_code ec;
-    auto bus = getSdBus();
-    int rc = bus->yield_method_call<int>(
-        yield, ec, "xyz.openbmc_project.MCTP_SMBus_PCIe_slot",
-        "/xyz/openbmc_project/mctp", "xyz.openbmc_project.MCTP.Base",
-        "ReleaseBandwidth", *eid);
-
-    if (ec || rc < 0)
+    if (mctpWrapper->releaseBandwidth(yield, *eid) < 0)
     {
-        phosphor::logging::log<phosphor::logging::level::ERR>(
-            (("releaseBandwidth: failed for EID: ") + std::to_string(*eid))
-                .c_str());
         return false;
     }
     rsvBWActive = false;
     reservedTID = pldmInvalidTid;
     reservedPLDMType = pldmInvalidType;
     return true;
+}
+
+std::optional<std::string> getDeviceLocation(const pldm_tid_t tid)
+{
+    std::optional<mctpw_eid_t> eid = tidMapper.getMappedEID(tid);
+    if (eid.has_value()) {
+        return mctpWrapper->getDeviceLocation(eid.value());
+    }
+    return std::nullopt;
 }
 
 std::optional<pldm_tid_t> TIDMapper::getMappedTID(const mctpw_eid_t eid)
@@ -579,6 +570,30 @@ void initDevice(const mctpw_eid_t eid, boost::asio::yield_context yield)
     }
 }
 
+// Parallel inits fail for devices behind SMBus mux due to timeouts waiting for
+// response. Also, sending pldm init messages in parallel causes inits to take a
+// longer duration due to the retries required for devices behind i2c mux. Thus,
+// serialize the device inits by implementing a queue to cache new EIDs if a
+// device init is already in progress.
+void deviceInitEventHandler(const mctpw_eid_t eid,
+                            boost::asio::yield_context yield)
+{
+    static std::queue<mctpw_eid_t> pendingDevices;
+    pendingDevices.emplace(eid);
+    if (pendingDevices.size() > 1)
+    {
+        phosphor::logging::log<phosphor::logging::level::WARNING>(
+            "Another device init in progress. Adding EID to queue.");
+        return;
+    }
+
+    while (pendingDevices.size())
+    {
+        initDevice(pendingDevices.front(), yield);
+        pendingDevices.pop();
+    }
+}
+
 void deleteDevice(const pldm_tid_t tid)
 {
     phosphor::logging::log<phosphor::logging::level::INFO>(
@@ -615,7 +630,7 @@ void onDeviceUpdate(void*, const mctpw::Event& evt,
     {
         case mctpw::Event::EventType::deviceAdded: {
             pldm::platform::pauseSensorPolling();
-            initDevice(evt.eid, yield);
+            deviceInitEventHandler(evt.eid, yield);
             pldm::platform::resumeSensorPolling();
             break;
         }

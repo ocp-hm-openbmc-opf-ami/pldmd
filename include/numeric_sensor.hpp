@@ -36,8 +36,9 @@ struct NumericSensor
 {
     NumericSensor(const std::string& sensorName,
                   std::vector<thresholds::Threshold>& thresholdData,
-                  const double max, const double min,
-                  const SensorUnit sensorUnit, const bool sensorDisabled);
+                  const double max, const double min, const double hysteresis,
+                  const SensorUnit sensorUnit, const bool sensorDisabled,
+                  const std::string& assocationPath);
 
     ~NumericSensor();
 
@@ -45,6 +46,8 @@ struct NumericSensor
     double maxValue;
     double minValue;
     std::vector<thresholds::Threshold> thresholds;
+    std::shared_ptr<sdbusplus::asio::dbus_interface> associationInterface =
+        nullptr;
     std::shared_ptr<sdbusplus::asio::dbus_interface> sensorInterface = nullptr;
     std::shared_ptr<sdbusplus::asio::dbus_interface> thresholdInterfaceWarning =
         nullptr;
@@ -56,8 +59,15 @@ struct NumericSensor
         nullptr;
     double value = std::numeric_limits<double>::quiet_NaN();
     double rawValue = std::numeric_limits<double>::quiet_NaN();
+
+    /** @brief hysteresis value to trigger the alarm*/
     double hysteresisTrigger;
-    double hysteresisPublish;
+
+    /** @brief minimum change required to update Sensor.Value interface. This is
+     * required to avoid property updates if the sensor is reporting minuscule
+     * change in value*/
+    double hysteresisPublish = 0;
+
     size_t errCount = 0;
     SensorUnit unit;
 

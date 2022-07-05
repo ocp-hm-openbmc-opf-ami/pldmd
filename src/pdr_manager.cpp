@@ -17,6 +17,7 @@
 #include "pdr_manager.hpp"
 
 #include "platform.hpp"
+#include "platform_association.hpp"
 #include "pldm.hpp"
 #include "utils.hpp"
 
@@ -59,6 +60,14 @@ PDRManager::~PDRManager()
     {
         objectServer->remove_interface(iter.second.first);
     }
+
+#ifdef EXPOSE_CHASSIS
+    if (inventoryIntf)
+    {
+        objectServer->remove_interface(inventoryIntf);
+        association::setPath(_tid, {});
+    }
+#endif
 
     if (pdrDumpInterface)
     {
@@ -872,6 +881,49 @@ void PDRManager::populateSystemHierarchy()
     _entityObjectPaths.clear();
 }
 
+void PDRManager::extractDeviceAuxName(EntityNode::NodePtr& rootNode)
+{
+    std::optional<std::string> deviceName;
+    std::optional<std::string> deviceLocation;
+    if (rootNode != nullptr)
+    {
+        auto iter = _entityAuxNames.find(rootNode->containerEntity);
+        if (iter != _entityAuxNames.end())
+        {
+            deviceName = iter->second;
+        }
+    }
+    deviceLocation = getDeviceLocation(_tid);
+
+    std::string auxName =
+        deviceLocation.has_value()
+            ? deviceLocation.value() + "_" + deviceName.value_or("PLDM_Device")
+            : deviceName.value_or("PLDM_Device") + "_" + std::to_string(_tid);
+
+    // Replace unsupported characters in DBus path
+    _deviceAuxName =
+        std::regex_replace(auxName, std::regex("[^a-zA-Z0-9_/]+"), "_");
+}
+
+#ifdef EXPOSE_CHASSIS
+void PDRManager::initializeInventoryIntf()
+{
+    std::string inventoryObj =
+        "/xyz/openbmc_project/inventory/system/board/" + _deviceAuxName;
+    auto objServer = getObjServer();
+
+    /** TODO: Use a PLDM-specific interface instead of Board
+     *  Changes on the Redfish API server side required.
+     */
+    inventoryIntf = objServer->add_interface(
+        inventoryObj, "xyz.openbmc_project.Inventory.Item.Board");
+    inventoryIntf->register_property("Name", _deviceAuxName);
+    inventoryIntf->initialize();
+
+    association::setPath(_tid, inventoryObj);
+}
+#endif
+
 void PDRManager::parseSensorAuxNamesPDR(std::vector<uint8_t>& pdrData)
 {
     if (pdrData.size() < sizeof(pldm_sensor_auxiliary_names_pdr))
@@ -893,8 +945,7 @@ void PDRManager::parseSensorAuxNamesPDR(std::vector<uint8_t>& pdrData)
                                namePDR->sensor_auxiliary_names))
     {
         // Cache the Sensor Auxiliary Names
-        _sensorAuxNames[namePDR->sensor_id] =
-            *name + "_" + std::to_string(_tid);
+        _sensorAuxNames[namePDR->sensor_id] = _deviceAuxName + "_" + *name;
 
         phosphor::logging::log<phosphor::logging::level::DEBUG>(
             ("SensorID:" +
@@ -925,8 +976,7 @@ void PDRManager::parseEffecterAuxNamesPDR(std::vector<uint8_t>& pdrData)
                                namePDR->effecter_auxiliary_names))
     {
         // Cache the Effecter Auxiliary Names
-        _effecterAuxNames[namePDR->effecter_id] =
-            *name + "_" + std::to_string(_tid);
+        _effecterAuxNames[namePDR->effecter_id] = _deviceAuxName + "_" + *name;
 
         phosphor::logging::log<phosphor::logging::level::DEBUG>(
             ("EffecterID:" +
@@ -975,7 +1025,8 @@ std::optional<std::string>
 std::string PDRManager::createSensorName(const SensorID sensorID)
 {
     std::string sensorName =
-        "PLDM_Sensor_" + std::to_string(sensorID) + "_" + std::to_string(_tid);
+        _deviceAuxName + "_Sensor_" + std::to_string(sensorID);
+
     _sensorAuxNames[sensorID] = sensorName;
 
     phosphor::logging::log<phosphor::logging::level::DEBUG>(
@@ -1182,8 +1233,8 @@ std::optional<std::string>
 
 std::string PDRManager::createEffecterName(const EffecterID effecterID)
 {
-    std::string effecterName = "PLDM_Effecter_" + std::to_string(effecterID) +
-                               "_" + std::to_string(_tid);
+    std::string effecterName =
+        _deviceAuxName + "_Effecter_" + std::to_string(effecterID);
 
     _effecterAuxNames[effecterID] = effecterName;
 
@@ -1582,6 +1633,10 @@ bool PDRManager::pdrManagerInit(boost::asio::yield_context yield)
     parsePDR<PLDM_PDR_ENTITY_ASSOCIATION>();
     getEntityAssociationPaths(_entityAssociationTree, {});
     populateSystemHierarchy();
+    extractDeviceAuxName(_entityAssociationTree);
+#ifdef EXPOSE_CHASSIS
+    initializeInventoryIntf();
+#endif
     parsePDR<PLDM_SENSOR_AUXILIARY_NAMES_PDR>();
     parsePDR<PLDM_EFFECTER_AUXILIARY_NAMES_PDR>();
     parsePDR<PLDM_NUMERIC_SENSOR_PDR>();

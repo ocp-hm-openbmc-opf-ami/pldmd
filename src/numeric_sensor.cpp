@@ -29,12 +29,13 @@ constexpr const size_t errorThreshold = 3;
 NumericSensor::NumericSensor(const std::string& sensorName,
                              std::vector<thresholds::Threshold>& thresholdData,
                              const double max, const double min,
+                             const double hysteresis,
                              const SensorUnit sensorUnit,
-                             const bool sensorDisabled) :
+                             const bool sensorDisabled,
+                             const std::string& associationPath) :
     name(std::regex_replace(sensorName, std::regex("[^a-zA-Z0-9_/]+"), "_")),
     maxValue(max), minValue(min), thresholds(thresholdData), unit(sensorUnit),
-    hysteresisTrigger((max - min) * 0.01),
-    hysteresisPublish((max - min) * 0.0001), errCount(0)
+    hysteresisTrigger(hysteresis), errCount(0)
 {
     std::string path;
     switch (unit)
@@ -75,9 +76,18 @@ NumericSensor::NumericSensor(const std::string& sensorName,
             path + name, "xyz.openbmc_project.Sensor.Threshold.Critical");
     }
 
-    // TODO: Support to update associations
-
     setInitialProperties(sensorDisabled);
+
+    if (!associationPath.empty())
+    {
+        std::vector<std::tuple<std::string, std::string, std::string>>
+            association = {{"chassis", "all_sensors", associationPath}};
+
+        associationInterface = objectServer->add_interface(
+            path + name, "xyz.openbmc_project.Association.Definitions");
+        associationInterface->register_property("Associations", association);
+        associationInterface->initialize();
+    }
 }
 
 NumericSensor::~NumericSensor()
@@ -94,6 +104,10 @@ NumericSensor::~NumericSensor()
     if (sensorInterface)
     {
         objectServer->remove_interface(sensorInterface);
+    }
+    if (associationInterface)
+    {
+        objectServer->remove_interface(associationInterface);
     }
 }
 
@@ -151,6 +165,7 @@ void NumericSensor::setInitialProperties(bool sensorDisabled)
     sensorInterface->register_property("MaxValue", maxValue);
     sensorInterface->register_property("MinValue", minValue);
     sensorInterface->register_property("Value", value);
+    sensorInterface->register_property("Unit", unit);
 
     for (thresholds::Threshold& threshold : thresholds)
     {
