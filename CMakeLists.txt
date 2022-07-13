@@ -35,6 +35,7 @@ set (
     -Wno-cast-align \
     -Wformat=2 \
     -Wno-reorder \
+    -Wno-psabi \
 "
 )
 
