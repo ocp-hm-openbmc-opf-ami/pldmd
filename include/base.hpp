@@ -34,11 +34,16 @@ struct hash<ver32_t>
                std::hash<uint8_t>{}(ver.alpha);
     }
 };
-inline bool operator==(const ver32_t& v1, const ver32_t& v2)
+
+template <>
+struct equal_to<ver32_t>
 {
-    return v1.major == v2.major && v1.minor == v2.minor &&
-           v1.update == v2.update && v1.alpha == v2.alpha;
-}
+    bool operator()(const ver32_t& v1, const ver32_t& v2) const
+    {
+        return v1.major == v2.major && v1.minor == v2.minor &&
+               v1.update == v2.update && v1.alpha == v2.alpha;
+    }
+};
 } // namespace std
 
 namespace pldm
