@@ -19,6 +19,7 @@
 #include "pldm.hpp"
 
 #include <phosphor-logging/log.hpp>
+#include <regex>
 #include <sdbusplus/asio/object_server.hpp>
 
 namespace pldm
@@ -348,7 +349,8 @@ void FWInventoryInfo::addCompImgSetDataToDBus()
 
 void FWInventoryInfo::addFirmwareInventoryToDBus()
 {
-    std::string inventoryName = getInventoryName();
+    std::string inventoryName = std::regex_replace(
+        getInventoryName(), std::regex("[^a-zA-Z0-9_/]+"), "_");
     inventoryPath = "/xyz/openbmc_project/software/" + inventoryName + "_" +
                     std::to_string(tid);
     std::string activation(
