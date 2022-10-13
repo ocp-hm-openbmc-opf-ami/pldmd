@@ -83,7 +83,10 @@ static std::vector<ChangeParam> checkThresholds(NumericSensor& sensor,
         // before resetting the indicator back to false.
         if (threshold.direction == Direction::high)
         {
-            if (value >= threshold.value)
+            if ((threshold.level == Level::warning &&
+                 value > threshold.value) ||
+                (threshold.level == Level::critical &&
+                 value >= threshold.value))
             {
                 thresholdChanges.emplace_back(threshold, true, value);
                 if (++cHiTrue < assertLogCount)
@@ -108,7 +111,9 @@ static std::vector<ChangeParam> checkThresholds(NumericSensor& sensor,
         }
         else if (threshold.direction == Direction::low)
         {
-            if (value <= threshold.value)
+            if ((threshold.level == Level::warning &&
+                 value <= threshold.value) ||
+                (threshold.level == Level::critical && value < threshold.value))
             {
                 thresholdChanges.emplace_back(threshold, true, value);
                 if (++cLoTrue < assertLogCount)
