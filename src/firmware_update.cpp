@@ -1219,7 +1219,7 @@ int FWUpdate::processRequestFirmwareData(const boost::asio::yield_context yield)
     }
     uint32_t offset = 0;
     uint32_t length = 0;
-    int retVal = 0;
+    int retVal = PLDM_ERROR;
     int prevProgress = 0;
     // Log interval for progess percentage
     constexpr int progressPercentLogLimit = 25;
@@ -1255,8 +1255,7 @@ int FWUpdate::processRequestFirmwareData(const boost::asio::yield_context yield)
                 ("TimeoutWaiting for requestFirmwareData packet. COMPONENT: " +
                  std::to_string(currentComp))
                     .c_str());
-
-            break;
+            return PLDM_ERROR;
         }
         fdReqMatched = false;
 
