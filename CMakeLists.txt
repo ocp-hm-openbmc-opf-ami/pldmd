@@ -7,7 +7,7 @@ option (EXPOSE_BASEBOARD_SENSOR "Expose PLDM sensors in baseboard Redfish Chassi
 option (EXPOSE_CHASSIS "Expose PLDM device as a standalone chassis in Redfish Chassis interface" OFF)
 
 set (BUILD_SHARED_LIBRARIES OFF)
-set (CMAKE_CXX_STANDARD 17)
+set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set (
