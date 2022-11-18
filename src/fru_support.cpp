@@ -20,6 +20,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <numeric>
+#include <regex>
 #include <sstream>
 #include <vector>
 #include <xyz/openbmc_project/Inventory/Source/PLDM/FRU/server.hpp>
@@ -95,10 +96,11 @@ void IpmiFru::convertFRUToIpmiFRU(const pldm_tid_t tid,
     }
 
     boost::algorithm::trim(productName);
-    std::replace(productName.begin(), productName.end(), ' ', '_');
+    std::string formattedProductName =
+        std::regex_replace(productName, std::regex("[^a-zA-Z0-9_/]+"), "_");
 
-    std::string fruPath = ("/xyz/openbmc_project/FruDevice/") + productName +
-                          "_" + std::to_string(tid);
+    std::string fruPath = ("/xyz/openbmc_project/FruDevice/") +
+                          formattedProductName + "_" + std::to_string(tid);
 
     std::shared_ptr<sdbusplus::asio::dbus_interface> iface =
         objServer->add_interface(fruPath, "xyz.openbmc_project.FruDevice");
