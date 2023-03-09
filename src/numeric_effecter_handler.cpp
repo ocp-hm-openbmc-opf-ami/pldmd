@@ -424,6 +424,7 @@ bool NumericEffecterHandler::setEffecter(boost::asio::yield_context yield,
     if (!validatePLDMRespDecode(_tid, rc, completionCode,
                                 "SetNumericEffecterValue"))
     {
+        _effecter->incrementError();
         return false;
     }
 

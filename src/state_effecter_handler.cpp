@@ -472,6 +472,7 @@ bool StateEffecterHandler::setEffecter(boost::asio::yield_context yield,
     if (!validatePLDMRespDecode(_tid, rc, completionCode,
                                 "SetStateEffecterStates"))
     {
+        incrementError();
         return false;
     }
 
