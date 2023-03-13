@@ -16,6 +16,7 @@
 
 #include "numeric_effecter_handler.hpp"
 
+#include "effecter.hpp"
 #include "pdr_utils.hpp"
 #include "platform.hpp"
 
@@ -228,7 +229,8 @@ bool NumericEffecterHandler::handleEffecterReading(
 
             double value =
                 pdr::effecter::calculateEffecterValue(*_pdr, *effecterReading);
-            _effecter->updateValue(value);
+            _effecter->updateValue(value, effecterAvailable,
+                                   effecterFunctional);
 
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
                 "GetNumericEffecterValue success",
@@ -238,8 +240,8 @@ bool NumericEffecterHandler::handleEffecterReading(
             break;
         }
         case EFFECTER_OPER_STATE_DISABLED: {
-            _effecter->markFunctional(false);
-            _effecter->markAvailable(true);
+            _effecter->updateValue(std::numeric_limits<double>::quiet_NaN(),
+                                   effecterAvailable, effecterNonFunctional);
 
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
                 "Numeric effecter disabled",
@@ -248,8 +250,8 @@ bool NumericEffecterHandler::handleEffecterReading(
             break;
         }
         case EFFECTER_OPER_STATE_UNAVAILABLE: {
-            _effecter->markFunctional(false);
-            _effecter->markAvailable(false);
+            _effecter->updateValue(std::numeric_limits<double>::quiet_NaN(),
+                                   effecterUnavailable, effecterNonFunctional);
 
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
                 "Numeric effecter unavailable",

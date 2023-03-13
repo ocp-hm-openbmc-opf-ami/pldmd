@@ -16,6 +16,8 @@
 
 #include "numeric_sensor.hpp"
 
+#include "sensor.hpp"
+
 #include <limits>
 #include <phosphor-logging/log.hpp>
 #include <regex>
@@ -204,19 +206,11 @@ void NumericSensor::setInitialProperties(bool sensorDisabled)
 
     availableInterface = std::make_shared<sdbusplus::asio::dbus_interface>(
         conn, sensorInterface->get_object_path(), availableInterfaceName);
-    availableInterface->register_property(
-        "Available", true, [this](const bool propIn, bool& old) {
-            if (propIn == old)
-            {
-                return 1;
-            }
-            old = propIn;
-            if (!propIn)
-            {
-                updateValue(std::numeric_limits<double>::quiet_NaN());
-            }
-            return 1;
-        });
+    availableInterface->register_property("Available", sensorAvailable,
+                                          [this](const bool propIn, bool& old) {
+                                              old = propIn;
+                                              return 1;
+                                          });
     availableInterface->initialize();
 
     operationalInterface = std::make_shared<sdbusplus::asio::dbus_interface>(
@@ -234,10 +228,6 @@ void NumericSensor::markFunctional(bool isFunctional)
     if (isFunctional)
     {
         errCount = 0;
-    }
-    else
-    {
-        updateValue(std::numeric_limits<double>::quiet_NaN());
     }
 }
 
@@ -262,7 +252,8 @@ void NumericSensor::incrementError()
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             ("Sensor " + name + " reading error").c_str());
-        markFunctional(false);
+        updateValue(std::numeric_limits<double>::quiet_NaN(), sensorAvailable,
+                    sensorNonFunctional);
     }
 }
 
@@ -271,7 +262,8 @@ bool NumericSensor::checkErrorThreshold()
     return errCount < errorThreshold;
 }
 
-void NumericSensor::updateValue(const double& newValue)
+void NumericSensor::updateValue(const double& newValue, const bool isAvailable,
+                                const bool isFunctional)
 {
     updateProperty(sensorInterface, value, newValue, "Value");
 
@@ -281,11 +273,8 @@ void NumericSensor::updateValue(const double& newValue)
     // which is called by checkThresholds() below,
     // in all current implementations of sensors that have thresholds.
     checkThresholds();
-    if (!std::isnan(newValue))
-    {
-        markFunctional(true);
-        markAvailable(true);
-    }
+    markFunctional(isAvailable);
+    markAvailable(isFunctional);
 }
 
 void NumericSensor::updateProperty(

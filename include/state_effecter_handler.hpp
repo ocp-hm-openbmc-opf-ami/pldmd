@@ -60,7 +60,8 @@ class StateEffecterHandler
     void incrementError();
 
     /** @brief Update effecter state*/
-    void updateState(const uint8_t currentState, const uint8_t pendingState);
+    void updateState(const uint8_t currentState, const uint8_t pendingState,
+                     const bool isAvailable, const bool isFunctional);
 
     /** @brief  Enable effecter*/
     bool enableStateEffecter(boost::asio::yield_context yield);
@@ -105,10 +106,7 @@ class StateEffecterHandler
     uint8_t pendingStateReading = std::numeric_limits<uint8_t>::max();
     uint8_t currentStateReading = std::numeric_limits<uint8_t>::max();
 
-    /** @brief Flags which indicate interfaces are ready*/
-    bool effecterIntfReady = false;
-    bool availableIntfReady = false;
-    bool operationalIntfReady = false;
+    /** @brief Flag which indicate interfaces are ready*/
     bool interfaceInitialized = false;
 
     /** @brief Effecter Interfaces*/

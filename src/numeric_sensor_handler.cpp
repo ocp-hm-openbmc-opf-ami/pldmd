@@ -19,6 +19,7 @@
 #include "pdr_utils.hpp"
 #include "platform.hpp"
 #include "platform_association.hpp"
+#include "sensor.hpp"
 
 #include <phosphor-logging/log.hpp>
 
@@ -273,9 +274,8 @@ bool NumericSensorHandler::handleSensorReading(
     switch (sensorOperationalState)
     {
         case PLDM_SENSOR_DISABLED: {
-            _sensor->markFunctional(false);
-            _sensor->markAvailable(true);
-
+            _sensor->updateValue(std::numeric_limits<double>::quiet_NaN(),
+                                 sensorAvailable, sensorNonFunctional);
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
                 "Numeric sensor disabled",
                 phosphor::logging::entry("SENSOR_ID=0x%0X", _sensorID),
@@ -283,8 +283,8 @@ bool NumericSensorHandler::handleSensorReading(
             break;
         }
         case PLDM_SENSOR_UNAVAILABLE: {
-            _sensor->markFunctional(false);
-            _sensor->markAvailable(false);
+            _sensor->updateValue(std::numeric_limits<double>::quiet_NaN(),
+                                 sensorUnavailable, sensorNonFunctional);
 
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
                 "Numeric sensor unavailable",
@@ -316,7 +316,8 @@ bool NumericSensorHandler::handleSensorReading(
             }
 
             _sensor->updateValue(
-                pdr::sensor::calculateSensorValue(*_pdr, *sensorReading));
+                pdr::sensor::calculateSensorValue(*_pdr, *sensorReading),
+                sensorAvailable, sensorFunctional);
 
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
                 "GetSensorReading success",

@@ -45,17 +45,12 @@ struct NumericEffecter
     size_t errCount = 0;
     EffecterUnit unit;
 
-    /** @brief Update the effecter functionality*/
-    void markFunctional(bool isFunctional);
-
-    /** @brief Update the effecter availability*/
-    void markAvailable(bool isAvailable);
-
     /** @brief Increment the error count in case of failure*/
     void incrementError();
 
     /** @brief Update effecter value*/
-    void updateValue(const double& newValue);
+    void updateValue(const double& newValue, const bool isAvaliable,
+                     const bool isFunctional);
 
   private:
     void updateProperty(
@@ -63,4 +58,10 @@ struct NumericEffecter
         double& oldValue, const double& newValue, const char* dbusPropertyName);
 
     void setInitialProperties();
+
+    /** @brief Update the effecter functionality*/
+    void markFunctional(bool isFunctional);
+
+    /** @brief Update the effecter availability*/
+    void markAvailable(bool isAvailable);
 };

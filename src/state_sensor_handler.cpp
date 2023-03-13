@@ -17,6 +17,7 @@
 #include "state_sensor_handler.hpp"
 
 #include "platform.hpp"
+#include "sensor.hpp"
 #include "state_set.hpp"
 
 #include <phosphor-logging/log.hpp>
@@ -65,8 +66,7 @@ void StateSensorHandler::setInitialProperties()
 
 void StateSensorHandler::initializeInterface()
 {
-    if (!interfaceInitialized && sensorIntfReady && availableIntfReady &&
-        operationalIntfReady)
+    if (!interfaceInitialized)
     {
         sensorInterface->register_property("PreviousState",
                                            previousStateReading);
@@ -97,8 +97,6 @@ void StateSensorHandler::markFunctional(bool isFunctional)
     if (!interfaceInitialized)
     {
         isFuntionalReading = isFunctional;
-        operationalIntfReady = true;
-        initializeInterface();
     }
     else
     {
@@ -108,10 +106,6 @@ void StateSensorHandler::markFunctional(bool isFunctional)
     if (isFunctional)
     {
         errCount = 0;
-    }
-    else
-    {
-        updateState(PLDM_INVALID_VALUE, PLDM_INVALID_VALUE);
     }
 }
 
@@ -129,8 +123,6 @@ void StateSensorHandler::markAvailable(bool isAvailable)
     if (!interfaceInitialized)
     {
         isAvailableReading = isAvailable;
-        availableIntfReady = true;
-        initializeInterface();
     }
     else
     {
@@ -152,7 +144,8 @@ void StateSensorHandler::incrementError()
             "State sensor reading failed",
             phosphor::logging::entry("SENSOR_ID=0x%0X", _sensorID),
             phosphor::logging::entry("TID=%d", _tid));
-        markFunctional(false);
+        updateState(PLDM_INVALID_VALUE, PLDM_INVALID_VALUE, sensorAvailable,
+                    sensorNonFunctional);
     }
 }
 
@@ -207,7 +200,8 @@ void StateSensorHandler::logStateChangeEvent(const uint8_t currentState,
 }
 
 void StateSensorHandler::updateState(const uint8_t currentState,
-                                     const uint8_t previousState)
+                                     const uint8_t previousState,
+                                     bool isAvailable, bool isFunctional)
 {
     if (!sensorInterface)
     {
@@ -220,8 +214,6 @@ void StateSensorHandler::updateState(const uint8_t currentState,
     {
         currentStateReading = currentState;
         previousStateReading = previousState;
-        sensorIntfReady = true;
-        initializeInterface();
     }
     else
     {
@@ -238,12 +230,9 @@ void StateSensorHandler::updateState(const uint8_t currentState,
         previousStateReading = previousState;
     }
 
-    if (currentState != PLDM_INVALID_VALUE &&
-        previousState != PLDM_INVALID_VALUE)
-    {
-        markFunctional(true);
-        markAvailable(true);
-    }
+    markAvailable(isAvailable);
+    markFunctional(isFunctional);
+    initializeInterface();
 }
 
 bool StateSensorHandler::handleSensorReading(
@@ -252,8 +241,8 @@ bool StateSensorHandler::handleSensorReading(
     switch (stateReading.sensor_op_state)
     {
         case PLDM_SENSOR_DISABLED: {
-            markFunctional(false);
-            markAvailable(true);
+            updateState(PLDM_INVALID_VALUE, PLDM_INVALID_VALUE, sensorAvailable,
+                        sensorNonFunctional);
 
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
                 "State sensor disabled",
@@ -262,8 +251,8 @@ bool StateSensorHandler::handleSensorReading(
             break;
         }
         case PLDM_SENSOR_UNAVAILABLE: {
-            markFunctional(false);
-            markAvailable(false);
+            updateState(PLDM_INVALID_VALUE, PLDM_INVALID_VALUE,
+                        sensorUnavailable, sensorNonFunctional);
 
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
                 "State sensor unavailable",
@@ -272,8 +261,8 @@ bool StateSensorHandler::handleSensorReading(
             return false;
         }
         case PLDM_SENSOR_ENABLED: {
-            updateState(stateReading.present_state,
-                        stateReading.previous_state);
+            updateState(stateReading.present_state, stateReading.previous_state,
+                        sensorAvailable, sensorFunctional);
 
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
                 "GetStateSensorReadings success",
@@ -316,8 +305,9 @@ bool StateSensorHandler::setStateSensorEnables(boost::asio::yield_context yield)
             sensorOpState = PLDM_SENSOR_DISABLED;
             /** @brief Sensor disabled flag*/
             sensorDisabled = true;
-            markAvailable(true);
-            markFunctional(false);
+            updateState(PLDM_INVALID_VALUE, PLDM_INVALID_VALUE, sensorAvailable,
+                        sensorNonFunctional);
+
             break;
         default:
             phosphor::logging::log<phosphor::logging::level::ERR>(

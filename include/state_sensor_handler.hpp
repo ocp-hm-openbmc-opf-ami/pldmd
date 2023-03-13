@@ -78,7 +78,8 @@ class StateSensorHandler
     void incrementError();
 
     /** @brief Update sensor state*/
-    void updateState(const uint8_t currentState, const uint8_t previousState);
+    void updateState(const uint8_t currentState, const uint8_t previousState,
+                     const bool isAvailable, const bool isFunctional);
 
     /** @brief Handle sensor reading*/
     bool handleSensorReading(get_sensor_state_field& stateReading);
@@ -111,10 +112,7 @@ class StateSensorHandler
     uint8_t previousStateReading = PLDM_INVALID_VALUE;
     uint8_t currentStateReading = PLDM_INVALID_VALUE;
 
-    /** @brief Flags which indicate interfaces are ready*/
-    bool sensorIntfReady = false;
-    bool availableIntfReady = false;
-    bool operationalIntfReady = false;
+    /** @brief Flag which indicate interfaces are ready*/
     bool interfaceInitialized = false;
 
     /** @brief Sensor Interfaces*/

@@ -16,6 +16,7 @@
 
 #include "state_effecter_handler.hpp"
 
+#include "effecter.hpp"
 #include "platform.hpp"
 
 #include <phosphor-logging/log.hpp>
@@ -64,8 +65,7 @@ void StateEffecterHandler::setInitialProperties()
 
 void StateEffecterHandler::initializeInterface()
 {
-    if (!interfaceInitialized && effecterIntfReady && availableIntfReady &&
-        operationalIntfReady)
+    if (!interfaceInitialized)
     {
         effecterInterface->register_property("PendingState",
                                              pendingStateReading);
@@ -97,8 +97,6 @@ void StateEffecterHandler::markFunctional(bool isFunctional)
     if (!interfaceInitialized)
     {
         isFuntionalReading = isFunctional;
-        operationalIntfReady = true;
-        initializeInterface();
     }
     else
     {
@@ -108,10 +106,6 @@ void StateEffecterHandler::markFunctional(bool isFunctional)
     if (isFunctional)
     {
         errCount = 0;
-    }
-    else
-    {
-        updateState(PLDM_INVALID_VALUE, PLDM_INVALID_VALUE);
     }
 }
 
@@ -129,8 +123,6 @@ void StateEffecterHandler::markAvailable(bool isAvailable)
     if (!interfaceInitialized)
     {
         isAvailableReading = isAvailable;
-        availableIntfReady = true;
-        initializeInterface();
     }
     else
     {
@@ -152,12 +144,14 @@ void StateEffecterHandler::incrementError()
             "State effecter reading failed",
             phosphor::logging::entry("EFFECTER_ID=0x%0X", _effecterID),
             phosphor::logging::entry("TID=%d", _tid));
-        markFunctional(false);
+        updateState(PLDM_INVALID_VALUE, PLDM_INVALID_VALUE, effecterAvailable,
+                    effecterNonFunctional);
     }
 }
 
 void StateEffecterHandler::updateState(const uint8_t currentState,
-                                       const uint8_t pendingState)
+                                       const uint8_t pendingState,
+                                       bool isAvailable, bool isFunctional)
 {
     if (!effecterInterface)
     {
@@ -170,8 +164,6 @@ void StateEffecterHandler::updateState(const uint8_t currentState,
     {
         currentStateReading = currentState;
         pendingStateReading = pendingState;
-        effecterIntfReady = true;
-        initializeInterface();
     }
     else
     {
@@ -179,13 +171,9 @@ void StateEffecterHandler::updateState(const uint8_t currentState,
         effecterInterface->set_property("PendingState", pendingState);
     }
 
-    if (currentState != PLDM_INVALID_VALUE &&
-        pendingState != PLDM_INVALID_VALUE)
-    {
-
-        markFunctional(true);
-        markAvailable(true);
-    }
+    markAvailable(isAvailable);
+    markFunctional(isFunctional);
+    initializeInterface();
 }
 
 bool StateEffecterHandler::enableStateEffecter(boost::asio::yield_context yield)
@@ -303,7 +291,8 @@ bool StateEffecterHandler::handleStateEffecterState(
             break;
         }
         case EFFECTER_OPER_STATE_ENABLED_NOUPDATEPENDING: {
-            updateState(stateReading.present_state, stateReading.pending_state);
+            updateState(stateReading.present_state, stateReading.pending_state,
+                        effecterAvailable, effecterFunctional);
 
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
                 "GetStateEffecterStates success",
@@ -312,8 +301,8 @@ bool StateEffecterHandler::handleStateEffecterState(
             break;
         }
         case EFFECTER_OPER_STATE_DISABLED: {
-            markFunctional(false);
-            markAvailable(true);
+            updateState(PLDM_INVALID_VALUE, PLDM_INVALID_VALUE,
+                        effecterAvailable, effecterNonFunctional);
 
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
                 "State effecter disabled",
@@ -322,8 +311,8 @@ bool StateEffecterHandler::handleStateEffecterState(
             break;
         }
         case EFFECTER_OPER_STATE_UNAVAILABLE: {
-            markFunctional(false);
-            markAvailable(false);
+            updateState(PLDM_INVALID_VALUE, PLDM_INVALID_VALUE,
+                        effecterUnavailable, effecterNonFunctional);
 
             phosphor::logging::log<phosphor::logging::level::DEBUG>(
                 "State effecter unavailable",

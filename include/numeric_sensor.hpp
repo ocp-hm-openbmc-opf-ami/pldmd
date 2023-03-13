@@ -71,12 +71,6 @@ struct NumericSensor
     size_t errCount = 0;
     SensorUnit unit;
 
-    /** @brief Update the sensor functionality*/
-    void markFunctional(bool isFunctional);
-
-    /** @brief Update the sensor availability*/
-    void markAvailable(bool isAvailable);
-
     /** @brief Increment the error count in case of failure*/
     void incrementError();
 
@@ -84,7 +78,8 @@ struct NumericSensor
     bool checkErrorThreshold();
 
     /** @brief Update sensor value*/
-    void updateValue(const double& newValue);
+    void updateValue(const double& newValue, const bool isAvaliable,
+                     const bool isFunctional);
 
     /** @brief Select the threshold interface as per the threshold passed*/
     std::optional<ThresholdInterface>
@@ -100,4 +95,10 @@ struct NumericSensor
     void checkThresholds();
 
     void setInitialProperties(const bool sensorDisabled);
+
+    /** @brief Update the sensor functionality*/
+    void markFunctional(bool isFunctional);
+
+    /** @brief Update the sensor availability*/
+    void markAvailable(bool isAvailable);
 };

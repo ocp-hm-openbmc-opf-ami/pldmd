@@ -16,6 +16,7 @@
 
 #include "numeric_effecter.hpp"
 
+#include "effecter.hpp"
 #include "pldm.hpp"
 
 #include <phosphor-logging/log.hpp>
@@ -52,7 +53,7 @@ NumericEffecter::NumericEffecter(const std::string& effecterName,
                    "/effecter/power/";
             break;
         default:
-            throw std::runtime_error("State effecter unit not supported");
+            throw std::runtime_error("Numeric effecter unit not supported");
             break;
     }
 
@@ -100,7 +101,7 @@ void NumericEffecter::setInitialProperties()
     effecterInterface->register_property("Value", value);
     effecterInterface->initialize();
 
-    operationalInterface->register_property("Functional", true);
+    operationalInterface->register_property("Functional", effecterFunctional);
     operationalInterface->initialize();
 
     std::shared_ptr<sdbusplus::asio::connection> conn = getSdBus();
@@ -108,19 +109,11 @@ void NumericEffecter::setInitialProperties()
     availableInterface = std::make_shared<sdbusplus::asio::dbus_interface>(
         conn, effecterInterface->get_object_path(),
         "xyz.openbmc_project.State.Decorator.Availability");
-    availableInterface->register_property(
-        "Available", true, [this](const bool propIn, bool& old) {
-            if (propIn == old)
-            {
-                return 1;
-            }
-            old = propIn;
-            if (!propIn)
-            {
-                updateValue(std::numeric_limits<double>::quiet_NaN());
-            }
-            return 1;
-        });
+    availableInterface->register_property("Available", effecterAvailable,
+                                          [this](const bool propIn, bool& old) {
+                                              old = propIn;
+                                              return 1;
+                                          });
     availableInterface->initialize();
 }
 
@@ -133,10 +126,6 @@ void NumericEffecter::markFunctional(bool isFunctional)
     if (isFunctional)
     {
         errCount = 0;
-    }
-    else
-    {
-        updateValue(std::numeric_limits<double>::quiet_NaN());
     }
 }
 
@@ -161,19 +150,19 @@ void NumericEffecter::incrementError()
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             ("Effecter " + name + " reading error").c_str());
-        markFunctional(false);
+        updateValue(std::numeric_limits<double>::quiet_NaN(), effecterAvailable,
+                    effecterNonFunctional);
     }
 }
 
-void NumericEffecter::updateValue(const double& currentValue)
+void NumericEffecter::updateValue(const double& currentValue,
+                                  const bool isAvaliable,
+                                  const bool isFunctional)
 {
     updateProperty(effecterInterface, value, currentValue, "Value");
 
-    if (!std::isnan(currentValue))
-    {
-        markFunctional(true);
-        markAvailable(true);
-    }
+    markAvailable(isAvaliable);
+    markFunctional(isFunctional);
 }
 
 void NumericEffecter::updateProperty(
