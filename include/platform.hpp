@@ -27,8 +27,8 @@ namespace pldm
 namespace platform
 {
 
-constexpr uint16_t commandTimeout = 100;
-constexpr size_t commandRetryCount = 3;
+constexpr uint16_t commandTimeout = 300;
+constexpr size_t commandRetryCount = 10;
 
 using UUID = std::array<uint8_t, 16>;
 
