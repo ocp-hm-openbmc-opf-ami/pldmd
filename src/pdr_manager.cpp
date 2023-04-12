@@ -781,9 +781,15 @@ void PDRManager::parseEntityAssociationPDR(std::vector<uint8_t>& pdrData)
 {
     size_t numEntities{};
     pldm_entity* entitiesPtr = nullptr;
-    pldm_entity_association_pdr_extract(pdrData.data(),
-                                        static_cast<uint16_t>(pdrData.size()),
-                                        &numEntities, &entitiesPtr);
+    if (!pldm_entity_association_pdr_extract(
+            pdrData.data(), static_cast<uint16_t>(pdrData.size()), &numEntities,
+            &entitiesPtr))
+    {
+        phosphor::logging::log<phosphor::logging::level::WARNING>(
+            "Entity Association PDR parsing failed",
+            phosphor::logging::entry("TID=%d", _tid));
+        return;
+    }
     std::shared_ptr<pldm_entity[]> entities(entitiesPtr, free);
 
     EntityNode::NodePtr entityAssociation = nullptr;
