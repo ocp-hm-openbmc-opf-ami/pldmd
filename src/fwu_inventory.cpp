@@ -510,7 +510,7 @@ void FWInventoryInfo::addCompDataToDBus()
 
 bool FWInventoryInfo::getCompAutoApply(const uint32_t capabilitiesDuringUpdate)
 {
-    constexpr size_t capabilitiesDuringUpdateMask = 0xFFFE;
+    constexpr size_t capabilitiesDuringUpdateMask = 1;
     return capabilitiesDuringUpdate & capabilitiesDuringUpdateMask;
 }
 
