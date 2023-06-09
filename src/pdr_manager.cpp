@@ -333,6 +333,25 @@ bool PDRManager::getDevicePDRRepo(
         recordHandle = nextRecordHandle;
 
     } while (recordHandle && --recordCount);
+
+    if (recordCount)
+    {
+        phosphor::logging::log<phosphor::logging::level::WARNING>(
+            "Possible erroneous PDR repository. 'nextRecordHandle = "
+            "0x0000_0000' but 'recordCount' says there are pending PDRs to "
+            "fetch.",
+            phosphor::logging::entry("TID=%d", _tid),
+            phosphor::logging::entry("PENDING_RECORD_COUNT=%lu", recordCount));
+    }
+
+    if (recordHandle)
+    {
+        phosphor::logging::log<phosphor::logging::level::WARNING>(
+            "Possible erroneous PDR repository. 'pendingRecordCount = 0' but "
+            "'nextRecordHandle' says there are pending PDRs to fetch.",
+            phosphor::logging::entry("TID=%d", _tid),
+            phosphor::logging::entry("NEXT_RECORD_HANDLE=%lu", recordHandle));
+    }
     return true;
 }
 
