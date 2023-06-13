@@ -689,7 +689,8 @@ int main(void)
 
     auto conn = std::make_shared<sdbusplus::asio::connection>(*ioc);
 
-    auto objectServer = std::make_shared<sdbusplus::asio::object_server>(conn);
+    auto objectServer = std::make_shared<sdbusplus::asio::object_server>(conn, true);
+    objectServer->add_manager("/xyz/openbmc_project/sensors");
     conn->request_name(pldmService);
     setSdBus(conn);
     setObjServer(objectServer);
