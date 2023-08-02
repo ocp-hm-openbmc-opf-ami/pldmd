@@ -897,7 +897,16 @@ void PDRManager::populateSystemHierarchy()
             DBusObjectPath objPath = pldmDevObj + pathName;
 
             DBusInterfacePtr entityIntf;
-            populateEntity(entityIntf, objPath, entity);
+            try
+            {
+                populateEntity(entityIntf, objPath, entity);
+            }
+            catch (const std::exception&)
+            {
+                phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                    ("Entity object path " + objPath + " is already exposed")
+                        .c_str());
+            }
             _systemHierarchyIntf.emplace(entity,
                                          std::make_pair(entityIntf, objPath));
         }
