@@ -252,8 +252,8 @@ class PDRManager
     /** @brief Entity Association tree representing system hierarchy*/
     EntityNode::NodePtr _entityAssociationTree;
 
-    /** @brief Temporary storage for Entity Association paths*/
-    std::vector<EntityAssociationPath> _entityObjectPaths;
+    /** @brief Temporary storage for Entity Association D-Bus object paths*/
+    std::unordered_map<DBusObjectPath, pldm_entity> _entityObjectPathMap;
 
     std::unordered_map<pldm_entity, std::pair<DBusInterfacePtr, DBusObjectPath>,
                        EntityHash, EntityComparator>

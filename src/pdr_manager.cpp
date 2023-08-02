@@ -834,12 +834,32 @@ void PDRManager::getEntityAssociationPaths(EntityNode::NodePtr& node,
     // Append node to the path
     path.emplace_back(node->containerEntity);
 
-    // If it is a leaf add to paths
-    if (node->containedEntities.empty())
+    auto getEntityAuxName = [this](const pldm_entity& entity) {
+        std::string entityAuxName;
+        auto itr = _entityAuxNames.find(entity);
+        if (itr != _entityAuxNames.end())
+        {
+            entityAuxName = itr->second;
+        }
+        else
+        {
+            // Dummy name if no Auxilary Name found
+            entityAuxName = std::to_string(entity.entity_type) + "_" +
+                            std::to_string(entity.entity_instance_num) + "_" +
+                            std::to_string(entity.entity_container_id);
+        }
+        return entityAuxName;
+    };
+
+    DBusObjectPath objectPathStr =
+        "/xyz/openbmc_project/system/" + std::to_string(_tid);
+    for (const pldm_entity& entity : path)
     {
-        _entityObjectPaths.emplace_back(path);
+        objectPathStr += "/" + getEntityAuxName(entity);
     }
-    else
+    _entityObjectPathMap.try_emplace(objectPathStr, node->containerEntity);
+
+    if (!node->containedEntities.empty())
     {
         for (EntityNode::NodePtr& child : node->containedEntities)
         {
@@ -868,51 +888,24 @@ static void populateEntity(DBusInterfacePtr& entityIntf,
 
 void PDRManager::populateSystemHierarchy()
 {
-    std::string pldmDevObj =
-        "/xyz/openbmc_project/system/" + std::to_string(_tid);
-
-    for (const EntityAssociationPath& path : _entityObjectPaths)
+    for (const auto& [objPath, entity] : _entityObjectPathMap)
     {
-        std::string pathName;
-        for (const pldm_entity& entity : path)
+        DBusInterfacePtr entityIntf;
+        try
         {
-
-            std::string entityAuxName;
-            auto itr = _entityAuxNames.find(entity);
-            if (itr != _entityAuxNames.end())
-            {
-                entityAuxName = itr->second;
-            }
-            else
-            {
-                // Dummy name if no Auxilary Name found
-                entityAuxName = std::to_string(entity.entity_type) + "_" +
-                                std::to_string(entity.entity_instance_num) +
-                                "_" +
-                                std::to_string(entity.entity_container_id);
-            }
-
-            // Append entity names for multilevel entity associations
-            pathName += "/" + entityAuxName;
-            DBusObjectPath objPath = pldmDevObj + pathName;
-
-            DBusInterfacePtr entityIntf;
-            try
-            {
-                populateEntity(entityIntf, objPath, entity);
-            }
-            catch (const std::exception&)
-            {
-                phosphor::logging::log<phosphor::logging::level::DEBUG>(
-                    ("Entity object path " + objPath + " is already exposed")
-                        .c_str());
-            }
-            _systemHierarchyIntf.emplace(entity,
-                                         std::make_pair(entityIntf, objPath));
+            populateEntity(entityIntf, objPath, entity);
         }
+        catch (const std::exception&)
+        {
+            phosphor::logging::log<phosphor::logging::level::DEBUG>(
+                ("Entity object path " + objPath + " is already exposed")
+                    .c_str());
+        }
+        _systemHierarchyIntf.emplace(entity,
+                                     std::make_pair(entityIntf, objPath));
     }
     // Clear after usage
-    _entityObjectPaths.clear();
+    _entityObjectPathMap.clear();
 }
 
 void PDRManager::extractDeviceAuxName(EntityNode::NodePtr& rootNode)
