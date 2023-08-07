@@ -56,6 +56,13 @@ NumericEffecter::NumericEffecter(const std::string& effecterName,
             throw std::runtime_error("Numeric effecter unit not supported");
             break;
     }
+    if (maxValue <= minValue)
+    {
+        throw std::runtime_error("Ignoring effecter " + name +
+                                 ": maxReadable '" + std::to_string(maxValue) +
+                                 "' not greater than minReadable'" +
+                                 std::to_string(minValue) + "'.");
+    }
 
     auto objectServer = getObjServer();
 
