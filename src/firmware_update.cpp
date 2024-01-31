@@ -2112,6 +2112,7 @@ int FWUpdate::runUpdate(
         retVal = processRequestFirmwareData(yield);
         if (retVal != PLDM_SUCCESS)
         {
+            processTransferComplete(yield, fdReq, transferResult);
             phosphor::logging::log<phosphor::logging::level::WARNING>(
                 ("runUpdate: processRequestFirmwareData failed. RETVAL: " +
                  std::to_string(retVal) +
