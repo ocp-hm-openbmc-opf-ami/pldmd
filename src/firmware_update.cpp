@@ -1937,7 +1937,8 @@ void FWUpdate::cancelReserveBWTimer()
 
 void FWUpdate::activateReserveBandwidth()
 {
-    boost::asio::spawn([this](boost::asio::yield_context yield) {
+    boost::asio::spawn(*getIoContext(), [this](
+                                            boost::asio::yield_context yield) {
         uint16_t reserveEidTimeOut = getReserveEidTimeOut();
         if (!reserveBandwidth(yield, currentTid, PLDM_FWUP, reserveEidTimeOut))
         {
@@ -2530,15 +2531,16 @@ static void initializeFWUBase()
                                              filePath.c_str()));
                 return rc;
             }
-            boost::asio::spawn([](boost::asio::yield_context yield) {
-                int ret = initUpdate(yield);
-                if (ret != PLDM_SUCCESS)
-                {
-                    phosphor::logging::log<phosphor::logging::level::ERR>(
-                        "StartFWUpdate: initUpdate failed.");
-                }
-                pldmImg = nullptr;
-            });
+            boost::asio::spawn(
+                *getIoContext(), [](boost::asio::yield_context yield) {
+                    int ret = initUpdate(yield);
+                    if (ret != PLDM_SUCCESS)
+                    {
+                        phosphor::logging::log<phosphor::logging::level::ERR>(
+                            "StartFWUpdate: initUpdate failed.");
+                    }
+                    pldmImg = nullptr;
+                });
             return rc;
         });
     fwuBaseIface->initialize();
