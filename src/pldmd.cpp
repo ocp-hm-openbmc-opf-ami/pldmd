@@ -700,7 +700,7 @@ int main(void)
     // TODO - Read from entity manager about the transport bindings to be
     // supported by PLDM
     mctpw::MCTPConfiguration config(mctpw::MessageType::pldm,
-                                    mctpw::BindingType::mctpOverSmBus);
+                                    mctpw::BindingType::mctpOverAny);
 
     pldm::mctpWrapper = std::make_unique<mctpw::MCTPWrapper>(
         conn, config, onDeviceUpdate, pldm::msgRecvCallback);
