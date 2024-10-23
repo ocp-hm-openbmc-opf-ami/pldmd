@@ -1284,7 +1284,7 @@ int FWUpdate::processRequestFirmwareData(const boost::asio::yield_context yield)
             prevProgress = progress;
             phosphor::logging::log<phosphor::logging::level::INFO>(
                 ("TID: " + std::to_string(currentTid) +
-                 " Component: " + std::to_string(currentComp + 1) +
+                 " Component: " + std::to_string(currentComp) +
                  " update package transfered: " + std::to_string(progress) +
                  "%")
                     .c_str());
