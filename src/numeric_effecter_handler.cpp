@@ -499,7 +499,7 @@ void NumericEffecterHandler::registerSetEffecter()
                                         phosphor::logging::entry("TID=%d",
                                                                  _tid));
                                 }
-                            });
+                            }, {});
                     });
             };
 

@@ -715,7 +715,7 @@ int main(void)
             initDevice(eid, yield);
             pldm::platform::resumeSensorPolling();
         }
-    });
+    }, {});
 
     ioc->run();
 

@@ -159,7 +159,7 @@ void Platform::pollAllSensors()
                 } while (!stopSensorPoll);
                 stopSensorPoll = false;
             }
-        });
+        }, {});
 }
 
 void Platform::startSensorPolling()

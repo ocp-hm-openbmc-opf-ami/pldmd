@@ -535,7 +535,7 @@ void StateEffecterHandler::registerSetEffecter()
                                         phosphor::logging::entry("TID=%d",
                                                                  _tid));
                                 }
-                            });
+                            }, {});
                     });
             };
 
