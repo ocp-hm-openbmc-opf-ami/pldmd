@@ -504,7 +504,7 @@ void NumericEffecterHandler::registerSetEffecter()
             };
 
             // Refresh the value on D-Bus
-            getIoContext()->post(refreshEffecterInterfaces);
+            boost::asio::post(*getIoContext(), refreshEffecterInterfaces);
         });
     setEffecterInterface->initialize();
 }
