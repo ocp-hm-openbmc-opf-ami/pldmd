@@ -117,7 +117,7 @@ void Platform::doPoll(boost::asio::yield_context yield)
 // polling loop with caller.
 void Platform::pollAllSensors()
 {
-    boost::asio::spawn(
+    (void)boost::asio::spawn(
         *getIoContext(), [this](boost::asio::yield_context yield) {
             while (1)
             {

@@ -10,6 +10,11 @@ set (BUILD_SHARED_LIBRARIES OFF)
 set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Boost 1.87 requires using the return of spawn() calls, to avoid build errors
+# we are casting them to (void) which causes a useless-cast error on the
+# current version of boost. We can add this flag back after boost is updated to
+# 1.87.
+#    -Wuseless-cast \
 set (
     CMAKE_CXX_FLAGS
     "${CMAKE_CXX_FLAGS} \
@@ -29,7 +34,6 @@ set (
     -Wduplicated-branches \
     -Wlogical-op \
     -Wnull-dereference \
-    -Wuseless-cast \
     -Wdouble-promotion \
     -Wno-strict-aliasing \
     -Wno-cast-align \

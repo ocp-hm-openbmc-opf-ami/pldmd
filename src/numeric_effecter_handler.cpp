@@ -486,7 +486,7 @@ void NumericEffecterHandler::registerSetEffecter()
                                 phosphor::logging::level::ERR>(
                                 "SetNumericEffecterValue: async_wait error");
                         }
-                        boost::asio::spawn(
+                        (void)boost::asio::spawn(
                             *getIoContext(),
                             [this](boost::asio::yield_context yieldCtx) {
                                 if (!populateEffecterValue(yieldCtx))

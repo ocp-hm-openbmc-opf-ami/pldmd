@@ -1937,7 +1937,7 @@ void FWUpdate::cancelReserveBWTimer()
 
 void FWUpdate::activateReserveBandwidth()
 {
-    boost::asio::spawn([this](boost::asio::yield_context yield) {
+    (void)boost::asio::spawn(*getIoContext(), [this](boost::asio::yield_context yield) {
         uint16_t reserveEidTimeOut = getReserveEidTimeOut();
         if (!reserveBandwidth(yield, currentTid, PLDM_FWUP, reserveEidTimeOut))
         {
@@ -1966,7 +1966,7 @@ void FWUpdate::activateReserveBandwidth()
             }
             activateReserveBandwidth();
         });
-    });
+    }, {});
 }
 
 struct SelfContainedActivationCache
@@ -2530,7 +2530,7 @@ static void initializeFWUBase()
                                              filePath.c_str()));
                 return rc;
             }
-            boost::asio::spawn([](boost::asio::yield_context yield) {
+            (void)boost::asio::spawn(*getIoContext(), [](boost::asio::yield_context yield) {
                 int ret = initUpdate(yield);
                 if (ret != PLDM_SUCCESS)
                 {
@@ -2538,7 +2538,7 @@ static void initializeFWUBase()
                         "StartFWUpdate: initUpdate failed.");
                 }
                 pldmImg = nullptr;
-            });
+            }, {});
             return rc;
         });
     fwuBaseIface->initialize();

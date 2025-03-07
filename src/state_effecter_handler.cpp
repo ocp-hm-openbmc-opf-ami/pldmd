@@ -522,7 +522,7 @@ void StateEffecterHandler::registerSetEffecter()
                                 phosphor::logging::level::ERR>(
                                 "SetStateEffecter: async_wait error");
                         }
-                        boost::asio::spawn(
+                        (void)boost::asio::spawn(
                             *getIoContext(),
                             [this](boost::asio::yield_context yieldCtx) {
                                 if (!populateEffecterValue(yieldCtx))

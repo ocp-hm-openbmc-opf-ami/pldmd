@@ -705,7 +705,7 @@ int main(void)
     pldm::mctpWrapper = std::make_unique<mctpw::MCTPWrapper>(
         conn, config, onDeviceUpdate, pldm::msgRecvCallback);
 
-    boost::asio::spawn(*ioc, [](boost::asio::yield_context yield) {
+    (void)boost::asio::spawn(*ioc, [](boost::asio::yield_context yield) {
         pldm::mctpWrapper->detectMctpEndpoints(yield);
         mctpw::MCTPWrapper::EndpointMap eidMap =
             pldm::mctpWrapper->getEndpointMap();
