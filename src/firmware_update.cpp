@@ -34,8 +34,8 @@ static std::unordered_map<
     pldm_tid_t, std::vector<std::unique_ptr<sdbusplus::asio::dbus_interface>>>
     fwuIface;
 
-// Maximum timeout in milliseconds for fwu commad request
-constexpr uint16_t timeout = 100;
+// Maximum timeout in milliseconds for fwu command request
+constexpr uint16_t timeout = 2000;
 
 // Timeout in milliseconds in between fwu command
 constexpr uint16_t fdCmdTimeout = 5000;
