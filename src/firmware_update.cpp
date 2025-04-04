@@ -2541,7 +2541,7 @@ static void initializeFWUBase()
             }, {});
             return rc;
         });
-    fwuBaseIface->initialize();
+    utils::interfaceInitialize(fwuBaseIface);
 }
 
 static void registerAssociationsProperty()
@@ -2559,7 +2559,7 @@ static void registerAssociationsProperty()
     std::vector<std::tuple<std::string, std::string, std::string>>
         emptyAssociation{std::make_tuple("", "", "")};
     associationsIntf->register_property("Associations", emptyAssociation);
-    associationsIntf->initialize();
+    utils::interfaceInitialize(associationsIntf);
 }
 
 bool fwuInit(boost::asio::yield_context yield, const pldm_tid_t tid)

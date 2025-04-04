@@ -709,14 +709,14 @@ BaseInterfaces registerBaseInterfaces(const pldm_tid_t tid,
     msgTypeIntf->register_property("FWUP", messageTypes.fwup);
     msgTypeIntf->register_property("RDE", messageTypes.rde);
     msgTypeIntf->register_property("OEM", messageTypes.oem);
-    msgTypeIntf->initialize();
+    utils::interfaceInitialize(msgTypeIntf);
 
     DBusInterfacePtr uuidIntf =
         addUniqueInterface(interfacePath, "xyz.openbmc_project.Common.UUID");
     std::string uuidData = formatUUID(uuid);
 
     uuidIntf->register_property("UUID", uuidData);
-    uuidIntf->initialize();
+    utils::interfaceInitialize(uuidIntf);
 
     BaseInterfaces baseInterfaces;
     baseInterfaces.msgTypeInterface = std::move(msgTypeIntf);
@@ -738,7 +738,7 @@ BaseInterfaces registerBaseInterfaces(const pldm_tid_t tid,
                 mctpeidIntf->register_property_r(
                     "EID", *eidPtr, sdbusplus::vtable::property_::const_,
                     [](const auto& r) { return r; });
-                mctpeidIntf->initialize();
+                utils::interfaceInitialize(mctpeidIntf);
                 baseInterfaces.transportTypeInterface = std::move(mctpeidIntf);
             }
             break;
@@ -759,7 +759,7 @@ BaseInterfaces registerBaseInterfaces(const pldm_tid_t tid,
             break;
     }
 
-    typeIntf->initialize();
+    utils::interfaceInitialize(typeIntf);
     baseInterfaces.transportDetailsInterface = std::move(typeIntf);
     return baseInterfaces;
 }

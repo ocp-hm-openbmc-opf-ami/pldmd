@@ -883,7 +883,7 @@ static void populateEntity(DBusInterfacePtr& entityIntf,
                                   entity.entity_instance_num);
     entityIntf->register_property("EntityContainerID",
                                   entity.entity_container_id);
-    entityIntf->initialize();
+    utils::interfaceInitialize(entityIntf);
 }
 
 void PDRManager::populateSystemHierarchy()
@@ -945,7 +945,7 @@ void PDRManager::initializeInventoryIntf()
     inventoryIntf = objServer->add_interface(
         inventoryObj, "xyz.openbmc_project.Inventory.Item.Board");
     inventoryIntf->register_property("Name", _deviceAuxName);
-    inventoryIntf->initialize();
+    utils::interfaceInitialize(inventoryIntf);
 
     association::setPath(_tid, inventoryObj);
 }
@@ -1024,7 +1024,7 @@ static void populateNumericSensor(DBusInterfacePtr& sensorIntf,
 
     sensorIntf = objServer->add_interface(path, sensorInterface);
     // TODO: Expose more numeric sensor info from PDR
-    sensorIntf->initialize();
+    utils::interfaceInitialize(sensorIntf);
 }
 
 std::optional<DBusObjectPath>
@@ -1149,7 +1149,7 @@ static void populateStateSensor(DBusInterfacePtr& sensorIntf,
 
     sensorIntf = objServer->add_interface(path, sensorInterface);
     // TODO: Expose more state sensor info from PDR
-    sensorIntf->initialize();
+    utils::interfaceInitialize(sensorIntf);
 }
 
 void PDRManager::parseStateSensorPDR(std::vector<uint8_t>& pdrData)
@@ -1281,7 +1281,7 @@ static void populateNumericEffecter(DBusInterfacePtr& effecterIntf,
 
     effecterIntf = objServer->add_interface(path, effecterInterface);
     // TODO: Expose more numeric effecter info from PDR
-    effecterIntf->initialize();
+    utils::interfaceInitialize(effecterIntf);
 }
 
 std::optional<DBusObjectPath>
@@ -1365,7 +1365,7 @@ static void populateStateEffecter(DBusInterfacePtr& effecterIntf,
 
     effecterIntf = objServer->add_interface(path, effecterInterface);
     // TODO: Expose more state effecter info from PDR
-    effecterIntf->initialize();
+    utils::interfaceInitialize(effecterIntf);
 }
 
 void PDRManager::parseStateEffecterPDR(std::vector<uint8_t>& pdrData)
@@ -1473,7 +1473,7 @@ static void populateFRURecordSet(DBusInterfacePtr& fruRSIntf,
     fruRSIntf = objServer->add_interface(path, effecterInterface);
     fruRSIntf->register_property("FRURecordSetIdentifier", fruRSIdentifier,
                                  sdbusplus::asio::PropertyPermission::readOnly);
-    fruRSIntf->initialize();
+    utils::interfaceInitialize(fruRSIntf);
 }
 
 void PDRManager::parseFRURecordSetPDR(std::vector<uint8_t>& pdrData)
@@ -1743,7 +1743,7 @@ void PDRManager::initializePDRDumpIntf()
             }
         }
     });
-    pdrDumpInterface->initialize();
+    utils::interfaceInitialize(pdrDumpInterface);
 }
 } // namespace platform
 } // namespace pldm

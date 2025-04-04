@@ -298,7 +298,7 @@ void FWInventoryInfo::addPCIDescriptorsToDBus(const std::string& objPath)
     {
         pciDevIntf->register_property(it.first, it.second);
     }
-    pciDevIntf->initialize();
+    utils::interfaceInitialize(pciDevIntf);
     interfaceList.push_back(std::move(pciDevIntf));
 }
 
@@ -334,14 +334,14 @@ void FWInventoryInfo::addCompImgSetDataToDBus()
         "xyz.openbmc_project.PLDM.FWU.ActiveComponentImageSetInfo");
     activeCompImgSetInfoIntf->register_property(
         "ActiveComponentImageSetVersionString", activeCompImgSetVerStr);
-    activeCompImgSetInfoIntf->initialize();
+    utils::interfaceInitialize(activeCompImgSetInfoIntf);
 
     auto pendingCompImgSetInfoIntf = objServer->add_unique_interface(
         compImgSetPath,
         "xyz.openbmc_project.PLDM.FWU.PendingComponentImageSetInfo");
     pendingCompImgSetInfoIntf->register_property(
         "PendingComponentImageSetVersionString", pendingCompImgSetVerStr);
-    pendingCompImgSetInfoIntf->initialize();
+    utils::interfaceInitialize(pendingCompImgSetInfoIntf);
 
     interfaceList.push_back(std::move(activeCompImgSetInfoIntf));
     interfaceList.push_back(std::move(pendingCompImgSetInfoIntf));
@@ -365,7 +365,7 @@ void FWInventoryInfo::addFirmwareInventoryToDBus()
     else
     {
         activationIntf->register_property("Activation", activation);
-        activationIntf->initialize();
+        utils::interfaceInitialize(activationIntf);
         interfaceList.push_back(std::move(activationIntf));
     }
     auto versionIntf = objServer->add_unique_interface(
@@ -381,7 +381,7 @@ void FWInventoryInfo::addFirmwareInventoryToDBus()
         std::string purpose(
             "xyz.openbmc_project.Software.Version.VersionPurpose.PLDM");
         versionIntf->register_property("Purpose", purpose);
-        versionIntf->initialize();
+        utils::interfaceInitialize(versionIntf);
         interfaceList.push_back(std::move(versionIntf));
     }
 }
@@ -485,7 +485,7 @@ void FWInventoryInfo::addCompDataToDBus()
             "CapabilitiesDuringUpdate",
             (std::get<bitfield32_t>(compProps["CapabilitiesDuringUpdate"]))
                 .value);
-        activeCompInfoIntf->initialize();
+        utils::interfaceInitialize(activeCompInfoIntf);
 
         auto pendingCompInfoIntf = objServer->add_unique_interface(
             compPath, "xyz.openbmc_project.PLDM.FWU.PendingComponentInfo");
@@ -502,7 +502,7 @@ void FWInventoryInfo::addCompDataToDBus()
             [](const char& c) { return !isprint(c); }, ' ');
         pendingCompInfoIntf->register_property("PendingComponentVersionString",
                                                pendingCompSrt);
-        pendingCompInfoIntf->initialize();
+        utils::interfaceInitialize(pendingCompInfoIntf);
         interfaceList.push_back(std::move(activeCompInfoIntf));
         interfaceList.push_back(std::move(pendingCompInfoIntf));
     }

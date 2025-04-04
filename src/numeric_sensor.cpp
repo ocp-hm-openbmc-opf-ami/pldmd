@@ -95,7 +95,7 @@ NumericSensor::NumericSensor(const std::string& sensorName,
         associationInterface = objectServer->add_interface(
             path + name, "xyz.openbmc_project.Association.Definitions");
         associationInterface->register_property("Associations", association);
-        associationInterface->initialize();
+        utils::interfaceInitialize(associationInterface);
     }
 }
 
@@ -190,20 +190,20 @@ void NumericSensor::setInitialProperties(bool sensorDisabled)
         thresholdIntf->iface->register_property(thresholdIntf->alarm, false);
     }
 
-    if (!sensorInterface->initialize())
+    if (!utils::interfaceInitialize(sensorInterface))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "Error initializing value interface");
     }
     if (thresholdInterfaceWarning &&
-        !thresholdInterfaceWarning->initialize(true))
+        !utils::interfaceInitialize(thresholdInterfaceWarning, true))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "Error initializing warning threshold interface");
     }
 
     if (thresholdInterfaceCritical &&
-        !thresholdInterfaceCritical->initialize(true))
+        !utils::interfaceInitialize(thresholdInterfaceCritical, true))
     {
         phosphor::logging::log<phosphor::logging::level::ERR>(
             "Error initializing critical threshold interface");
@@ -218,12 +218,12 @@ void NumericSensor::setInitialProperties(bool sensorDisabled)
                                               old = propIn;
                                               return 1;
                                           });
-    availableInterface->initialize();
+    utils::interfaceInitialize(availableInterface);
 
     operationalInterface = std::make_shared<sdbusplus::asio::dbus_interface>(
         conn, sensorInterface->get_object_path(), operationalInterfaceName);
     operationalInterface->register_property("Functional", !sensorDisabled);
-    operationalInterface->initialize();
+    utils::interfaceInitialize(operationalInterface);
 }
 
 void NumericSensor::markFunctional(bool isFunctional)

@@ -232,7 +232,7 @@ static bool addFRUObjectToDbus(const std::string& fruObjPath,
         fruIface->register_property(i.first, propertyVal);
     }
 
-    fruIface->initialize();
+    utils::interfaceInitialize(fruIface);
     fruInterface.push_back(fruIface);
 
     return true;
@@ -794,7 +794,7 @@ static void initializeGetFruIntf()
             }
             return std::move(retVal).value();
         });
-    getFRUIface->initialize();
+    utils::interfaceInitialize(getFRUIface);
 }
 
 static void initializeFRUBase()
@@ -818,7 +818,7 @@ static void initializeFRUBase()
             }
             return retVal;
         });
-    setFRUIface->initialize();
+    utils::interfaceInitialize(setFRUIface);
 
     if (auto envPtr = std::getenv("PLDM_DEBUG"))
     {

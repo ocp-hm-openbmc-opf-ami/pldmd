@@ -17,6 +17,7 @@
 
 #include "base.hpp"
 #include "mctp_wrapper.hpp"
+#include "utils.hpp"
 
 #include <boost/asio.hpp>
 #include <boost/asio/error.hpp>

@@ -70,7 +70,7 @@ void IpmiFru::initializeFRUSupport()
         return retVal.value();
     });
 
-    fruIface->initialize();
+    utils::interfaceInitialize(fruIface);
 }
 
 void IpmiFru::convertFRUToIpmiFRU(const pldm_tid_t tid,
@@ -147,7 +147,7 @@ void IpmiFru::convertFRUToIpmiFRU(const pldm_tid_t tid,
     iface->register_property("BUS", dummybusNumber);
     iface->register_property("ADDRESS", static_cast<uint32_t>(tid));
 
-    iface->initialize();
+    utils::interfaceInitialize(iface);
     ipmiFruInterface.emplace(tid, iface);
     ipmiFRUProperties.emplace(tid, std::move(ipmiProps));
 }
@@ -417,7 +417,7 @@ void RedfishFru::createInterface(const pldm_tid_t tid,
         }
     }
 
-    fruIface->initialize();
+    utils::interfaceInitialize(fruIface);
     redfishFruInterface.emplace(tid, fruIface);
 }
 

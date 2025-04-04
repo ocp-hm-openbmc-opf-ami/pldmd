@@ -71,14 +71,14 @@ void StateEffecterHandler::initializeInterface()
                                              pendingStateReading);
         effecterInterface->register_property("CurrentState",
                                              currentStateReading);
-        effecterInterface->initialize();
+        utils::interfaceInitialize(effecterInterface);
 
         availableInterface->register_property("Available", isAvailableReading);
-        availableInterface->initialize();
+        utils::interfaceInitialize(availableInterface);
 
         operationalInterface->register_property("Functional",
                                                 isFuntionalReading);
-        operationalInterface->initialize();
+        utils::interfaceInitialize(operationalInterface);
         interfaceInitialized = true;
     }
 }
@@ -542,7 +542,7 @@ void StateEffecterHandler::registerSetEffecter()
             // Refresh the value on D-Bus
             boost::asio::post(*getIoContext(), refreshEffecterInterfaces);
         });
-    setEffecterInterface->initialize();
+    utils::interfaceInitialize(setEffecterInterface);
 }
 
 bool StateEffecterHandler::effecterHandlerInit(boost::asio::yield_context yield)

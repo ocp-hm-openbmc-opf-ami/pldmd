@@ -17,6 +17,7 @@
 #pragma once
 
 #include "pldm.hpp"
+#include "utils.hpp"
 
 #include <limits>
 #include <sdbusplus/asio/connection.hpp>

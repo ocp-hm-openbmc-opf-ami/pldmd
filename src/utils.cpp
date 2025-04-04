@@ -39,4 +39,46 @@ void printVect(const std::string& msg, const std::vector<uint8_t>& vec)
         ssVec.str().c_str());
 }
 
+bool interfaceInitialize(
+    const std::shared_ptr<sdbusplus::asio::dbus_interface>& interface,
+    const bool flag)
+{
+    try
+    {
+        return interface->initialize(flag);
+    }
+    catch (const std::exception& e)
+    {
+        const auto interfaceName = interface->get_interface_name();
+        const auto objectPath = interface->get_object_path();
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            ("Error initializing interface for object: INTERFACE=" +
+             interfaceName + " OBJECT_PATH=" + objectPath +
+             " ERROR=" + e.what())
+                .c_str());
+        throw;
+    }
+}
+
+bool interfaceInitialize(
+    const std::unique_ptr<sdbusplus::asio::dbus_interface>& interface,
+    const bool flag)
+{
+    try
+    {
+        return interface->initialize(flag);
+    }
+    catch (const std::exception& e)
+    {
+        const auto interfaceName = interface->get_interface_name();
+        const auto objectPath = interface->get_object_path();
+        phosphor::logging::log<phosphor::logging::level::INFO>(
+            ("Error initializing interface for object: INTERFACE=" +
+             interfaceName + " OBJECT_PATH=" + objectPath +
+             " ERROR=" + e.what())
+                .c_str());
+        throw;
+    }
+}
+
 } // namespace utils

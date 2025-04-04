@@ -258,7 +258,7 @@ void Platform::initializeSensorPollIntf()
                                                 resumeSensorPolling();
                                             }
                                         });
-    pausePollInterface->initialize();
+    utils::interfaceInitialize(pausePollInterface);
 }
 
 void Platform::initializePlatformIntf()
@@ -282,7 +282,7 @@ void Platform::initializePlatformIntf()
             platformInit(yield, tid, {});
             resumeSensorPolling();
         });
-    platformInterface->initialize();
+    utils::interfaceInitialize(platformInterface);
 }
 
 bool Platform::isTerminusRemoved(const pldm_tid_t tid)

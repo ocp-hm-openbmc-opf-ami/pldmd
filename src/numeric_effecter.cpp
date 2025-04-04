@@ -106,10 +106,10 @@ void NumericEffecter::setInitialProperties()
     effecterInterface->register_property("MaxValue", maxValue);
     effecterInterface->register_property("MinValue", minValue);
     effecterInterface->register_property("Value", value);
-    effecterInterface->initialize();
+    utils::interfaceInitialize(effecterInterface);
 
     operationalInterface->register_property("Functional", effecterFunctional);
-    operationalInterface->initialize();
+    utils::interfaceInitialize(operationalInterface);
 
     std::shared_ptr<sdbusplus::asio::connection> conn = getSdBus();
 
@@ -121,7 +121,7 @@ void NumericEffecter::setInitialProperties()
                                               old = propIn;
                                               return 1;
                                           });
-    availableInterface->initialize();
+    utils::interfaceInitialize(availableInterface);
 }
 
 void NumericEffecter::markFunctional(bool isFunctional)

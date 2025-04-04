@@ -17,6 +17,8 @@
 #pragma once
 
 #include <cstdint>
+#include <phosphor-logging/log.hpp>
+#include <sdbusplus/asio/object_server.hpp>
 #include <sstream>
 #include <vector>
 
@@ -60,5 +62,22 @@ inline uint32_t to_uint32(uint64_t num)
 {
     return static_cast<uint32_t>(num);
 }
+
+/** @brief Helper to initialize the interface
+ *
+ * Helper to initialize the interface with the given flag
+ * Has extensive logs to help debugging
+ * @param interface[in] - Interface to initialize
+ * @param flag[in] - Flag to initialize the interface
+ * @return - Result of the interface initialization
+ *
+ */
+bool interfaceInitialize(
+    const std::shared_ptr<sdbusplus::asio::dbus_interface>& interface,
+    const bool flag = false);
+
+bool interfaceInitialize(
+    const std::unique_ptr<sdbusplus::asio::dbus_interface>& interface,
+    const bool flag = false);
 
 } // namespace utils

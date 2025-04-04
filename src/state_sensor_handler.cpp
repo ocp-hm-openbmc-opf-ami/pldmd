@@ -71,14 +71,14 @@ void StateSensorHandler::initializeInterface()
         sensorInterface->register_property("PreviousState",
                                            previousStateReading);
         sensorInterface->register_property("CurrentState", currentStateReading);
-        sensorInterface->initialize();
+        utils::interfaceInitialize(sensorInterface);
 
         availableInterface->register_property("Available", isAvailableReading);
-        availableInterface->initialize();
+        utils::interfaceInitialize(availableInterface);
 
         operationalInterface->register_property("Functional",
                                                 isFuntionalReading);
-        operationalInterface->initialize();
+        utils::interfaceInitialize(operationalInterface);
         interfaceInitialized = true;
     }
 }
