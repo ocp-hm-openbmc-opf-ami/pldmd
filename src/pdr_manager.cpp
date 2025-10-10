@@ -512,10 +512,13 @@ static std::optional<std::string> getAuxName(const uint8_t nameStrCount,
         // Only supports English
         if (langTag == supportedLangTag)
         {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             std::string auxName =
                 std::wstring_convert<std::codecvt_utf8_utf16<char16_t>,
                                      char16_t>{}
                     .to_bytes(u16_str);
+#pragma GCC diagnostic pop
 
             // Auxiliary names are used to create D-Bus object paths.
             // Replacing all non-alphanumeric with underscore
