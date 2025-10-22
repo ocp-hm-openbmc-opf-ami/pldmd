@@ -626,12 +626,12 @@ void onDeviceUpdate(void*, const mctpw::Event& evt,
     {
         case mctpw::Event::EventType::deviceAdded: {
             pldm::platform::pauseSensorPolling();
-            deviceInitEventHandler(evt.eid, yield);
+            deviceInitEventHandler(evt.deviceId.mctpEID(), yield);
             pldm::platform::resumeSensorPolling();
             break;
         }
         case mctpw::Event::EventType::deviceRemoved: {
-            auto tid = pldm::tidMapper.getMappedTID(evt.eid);
+            auto tid = pldm::tidMapper.getMappedTID(evt.deviceId.mctpEID());
             if (tid)
             {
                 deleteDevice(tid.value());
@@ -639,7 +639,7 @@ void onDeviceUpdate(void*, const mctpw::Event& evt,
             else
             {
                 phosphor::logging::log<phosphor::logging::level::WARNING>(
-                    ("EID " + std::to_string(static_cast<int>(evt.eid)) +
+                    ("EID " + std::to_string(static_cast<int>(evt.deviceId.mctpEID())) +
                      " is not mapped to any TID")
                         .c_str());
             }
@@ -707,12 +707,12 @@ int main(void)
 
     (void)boost::asio::spawn(*ioc, [](boost::asio::yield_context yield) {
         pldm::mctpWrapper->detectMctpEndpoints(yield);
-        mctpw::MCTPWrapper::EndpointMap eidMap =
-            pldm::mctpWrapper->getEndpointMap();
-        for (auto& [eid, service] : eidMap)
+        auto eidMap =
+            pldm::mctpWrapper->getEndpointMapExtended();
+        for (auto& deviceID : eidMap)
         {
             pldm::platform::pauseSensorPolling();
-            initDevice(eid, yield);
+            initDevice(deviceID.mctpEID(), yield);
             pldm::platform::resumeSensorPolling();
         }
     }, {});
