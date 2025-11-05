@@ -91,7 +91,8 @@ set (SERVICE_FILES
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEADER_FILES})
 
 target_link_libraries (${PROJECT_NAME} mctpwplus sdbusplus -lsystemd -lpldm_intel
-                        -lpthread -lstdc++fs -lphosphor_dbus -lboost_coroutine)
+                        -lpthread -lstdc++fs -lphosphor_dbus -lboost_coroutine
+                        -lboost_context)
 
 find_package (PkgConfig REQUIRED)
 pkg_get_variable(SYSTEMD_SYSTEM_UNIT_DIR systemd systemdsystemunitdir)
