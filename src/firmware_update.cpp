@@ -565,7 +565,7 @@ int FWUpdate::processSendMetaData(const boost::asio::yield_context yield)
 
     // Calculate based on size of payload and maximum transfer size
     // Max number of requests including the requeries
-    size_t maxNumReq = findMaxNumReq(fwDeviceMetaData.size());
+    size_t maxNumReq = findMaxNumReq(static_cast<uint32_t>(fwDeviceMetaData.size()));
     // Max number of unique requests (excluding requeries)
     size_t numExpectedRequests = calcMaxNumReq(fwDeviceMetaData.size());
 
@@ -1447,7 +1447,7 @@ int FWUpdate::processSendPackageData(const boost::asio::yield_context yield)
     size_t offset = 0;
     int retVal = 0;
     size_t length = PLDM_FWU_BASELINE_TRANSFER_SIZE; // max payload size
-    const size_t dataSize = packageData.size();
+    const uint32_t dataSize = static_cast<uint32_t>(packageData.size());
 
     // Calculate based on size of payload and maximum transfer size
     // Max number of requests including the requeries
