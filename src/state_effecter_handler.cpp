@@ -19,6 +19,7 @@
 #include "effecter.hpp"
 #include "platform.hpp"
 
+#include <boost/asio/detached.hpp>
 #include <phosphor-logging/log.hpp>
 
 namespace pldm
@@ -535,7 +536,7 @@ void StateEffecterHandler::registerSetEffecter()
                                         phosphor::logging::entry("TID=%d",
                                                                  _tid));
                                 }
-                            }, {});
+                            }, boost::asio::detached);
                     });
             };
 

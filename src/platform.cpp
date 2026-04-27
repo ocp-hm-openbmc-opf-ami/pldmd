@@ -15,6 +15,7 @@
  */
 #include "platform.hpp"
 
+#include <boost/asio/detached.hpp>
 #include <phosphor-logging/log.hpp>
 
 namespace pldm
@@ -159,7 +160,7 @@ void Platform::pollAllSensors()
                 } while (!stopSensorPoll);
                 stopSensorPoll = false;
             }
-        }, {});
+        }, boost::asio::detached);
 }
 
 void Platform::startSensorPolling()

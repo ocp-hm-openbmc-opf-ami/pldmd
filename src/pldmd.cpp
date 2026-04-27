@@ -20,6 +20,7 @@
 #include "pldm.hpp"
 #include "utils.hpp"
 
+#include <boost/asio/detached.hpp>
 #include <queue>
 
 extern "C" {
@@ -715,7 +716,7 @@ int main(void)
             initDevice(deviceID.mctpEID(), yield);
             pldm::platform::resumeSensorPolling();
         }
-    }, {});
+    }, boost::asio::detached);
 
     ioc->run();
 

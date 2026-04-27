@@ -20,6 +20,7 @@
 #include "pldm.hpp"
 #include "pldm_fwu_image.hpp"
 
+#include <boost/asio/detached.hpp>
 #include <filesystem>
 #include <phosphor-logging/log.hpp>
 #include <xyz/openbmc_project/PLDM/FWU/FWUBase/server.hpp>
@@ -1966,7 +1967,7 @@ void FWUpdate::activateReserveBandwidth()
             }
             activateReserveBandwidth();
         });
-    }, {});
+    }, boost::asio::detached);
 }
 
 struct SelfContainedActivationCache
@@ -2538,7 +2539,7 @@ static void initializeFWUBase()
                         "StartFWUpdate: initUpdate failed.");
                 }
                 pldmImg = nullptr;
-            }, {});
+            },  boost::asio::detached);
             return rc;
         });
     utils::interfaceInitialize(fwuBaseIface);
